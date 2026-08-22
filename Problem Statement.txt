@@ -1,0 +1,31 @@
+The problem: Public healthcare systems across developing nations face persistent supply chain vulnerabilities. The inability to track medicines, patient footfall, and resource utilisation in real time across vast networks of Primary Health Centres leads to stock-outs and limits a nation's capacity to respond when it matters most.
+
+The challenge: Build a federated AI platform for national-scale health resource and supply chain management — real-time visibility into medicine stocks, bed availability, and medical personnel attendance across a nation's entire PHC network. It should forecast demand, generate early warnings for potential stock-outs during health emergencies, and recommend automated cross-district resource redistribution, while allowing for shared predictive modelling across BRICS nations.
+
+
+Build
+Submissions must demonstrate all of the following:
+
+✓
+A functioning end-to-end flow for your track's core use case
+✓
+Mandatory integration of Google AI — GenAI, predictive modelling, or computer vision etc
+✓
+Real or realistic data — public datasets, sample data, or APIs where live data isn't available
+✓
+Built for India — the solution should be designed to scale across states and communities, not just a single city
+✓
+Multilingual or voice support where the track calls for it
+Submit
+Submission package:
+
+1
+Source code — public or access-granted GitHub repository
+2
+Demo video (3–5 minutes) — working end-to-end walkthrough
+3
+Pitch deck (10–12 slides) — problem, solution, AI approach, who it serves, why it's deployable, how it scales across India
+4
+Brief description — small description of your solution in 2-3 lines
+5
+Deployed link — A live deployed link of your prototype

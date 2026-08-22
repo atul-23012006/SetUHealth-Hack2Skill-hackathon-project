@@ -25,11 +25,19 @@ backend/   FastAPI (Python) — data, forecasting, redistribution, federated
 ```
 
 - **Data**: a deterministic synthetic dataset (`backend/app/data/generate_data.py`)
-  of 100+ PHCs across 6 real Indian states/24 districts, 12 essential
+  of 150+ PHCs across 6 real Indian states / 24 districts, 12 essential
   medicines (from India's NLEM), and 90 days of daily stock/bed/staff history
   with realistic seasonal demand spikes (e.g. anti-malarials in monsoon) and
   a subset of facilities deliberately under supply stress — so forecasting
-  and redistribution have real signal to act on.
+  and redistribution have real signal to act on. Per-district facility
+  counts are not arbitrary: they're generated proportionally from the real
+  number of functioning PHCs in each district, per the Ministry of Health &
+  Family Welfare / National Health Mission's official [Rural Health
+  Statistics — District-wise Availability of Health Centres in India](https://www.nhm.gov.in/images/pdf/monitoring/rhs/district-wise-health-centres.pdf)
+  (`backend/app/data/reference.py::REAL_PHC_COUNTS`), scaled to 10% of the
+  real counts so the demo stays fast and the map stays legible — the same
+  generator scales linearly to the full real counts (and the full ~1.6 lakh
+  PHC network) given real operational data feeds.
 - **Forecasting** (`backend/app/services/forecasting.py`): estimates each
   PHC/medicine's net daily depletion rate from its trailing 14-day window and
   projects days-to-stockout — flagging `critical` (≤7 days) and `warning`

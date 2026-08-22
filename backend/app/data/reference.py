@@ -8,8 +8,25 @@ STATES = {
     "Uttar Pradesh": ["Lucknow", "Varanasi", "Meerut", "Gorakhpur"],
     "Bihar": ["Patna", "Gaya", "Muzaffarpur", "Bhagalpur"],
     "Rajasthan": ["Jaipur", "Jodhpur", "Udaipur", "Bikaner"],
-    "Tamil Nadu": ["Chennai", "Madurai", "Coimbatore", "Salem"],
+    "Tamil Nadu": ["Coimbatore", "Madurai", "Salem", "Tiruchirappalli"],
     "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur"],
+}
+
+# Real number of functioning Primary Health Centres per district, from the
+# Ministry of Health & Family Welfare / National Health Mission's official
+# "District-wise Availability of Health Centres in India" (Rural Health
+# Statistics, as on March 2011): https://www.nhm.gov.in/images/pdf/monitoring/rhs/district-wise-health-centres.pdf
+# "Kochi" below is keyed to the Ernakulam district figure (Kochi is Ernakulam's
+# district headquarters). Chennai is excluded from this table upstream since
+# it is a fully urban district with effectively no rural PHCs under this
+# scheme; Tiruchirappalli is used in its place for Tamil Nadu.
+REAL_PHC_COUNTS = {
+    "Pune": 96, "Nagpur": 49, "Nashik": 103, "Aurangabad": 50,
+    "Lucknow": 37, "Varanasi": 43, "Meerut": 43, "Gorakhpur": 87,
+    "Patna": 85, "Gaya": 71, "Muzaffarpur": 94, "Bhagalpur": 71,
+    "Jaipur": 88, "Jodhpur": 66, "Udaipur": 69, "Bikaner": 39,
+    "Coimbatore": 35, "Madurai": 38, "Salem": 59, "Tiruchirappalli": 42,
+    "Thiruvananthapuram": 61, "Kochi": 70, "Kozhikode": 61, "Thrissur": 75,
 }
 
 # Essential medicines drawn from India's National List of Essential Medicines

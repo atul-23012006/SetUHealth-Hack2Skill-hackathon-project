@@ -9,18 +9,27 @@ import random
 from datetime import date, timedelta
 from pathlib import Path
 
-from app.data.reference import STATES, MEDICINES, STAFF_ROLES
+from app.data.reference import STATES, MEDICINES, STAFF_ROLES, REAL_PHC_COUNTS
 
 SEED = 42
 DAYS = 90
 OUT_DIR = Path(__file__).parent / "generated"
+
+# The demo runs at 1/10th the real district-level PHC count (see
+# REAL_PHC_COUNTS in reference.py, sourced from official Rural Health
+# Statistics) so the map stays legible and forecasting/redistribution stay
+# fast for a live demo. Facility counts are still proportional to the real
+# district data, not uniform - the architecture scales linearly to the full
+# real counts (and beyond) in production.
+SCALE_FACTOR = 0.1
+MIN_PHCS_PER_DISTRICT = 3
 
 DISTRICT_CENTERS = {
     "Pune": (18.52, 73.85), "Nagpur": (21.15, 79.09), "Nashik": (20.00, 73.79), "Aurangabad": (19.88, 75.34),
     "Lucknow": (26.85, 80.95), "Varanasi": (25.32, 83.01), "Meerut": (28.98, 77.71), "Gorakhpur": (26.76, 83.37),
     "Patna": (25.59, 85.14), "Gaya": (24.80, 85.00), "Muzaffarpur": (26.12, 85.39), "Bhagalpur": (25.24, 86.98),
     "Jaipur": (26.91, 75.79), "Jodhpur": (26.28, 73.02), "Udaipur": (24.58, 73.68), "Bikaner": (28.02, 73.31),
-    "Chennai": (13.08, 80.27), "Madurai": (9.93, 78.12), "Coimbatore": (11.02, 76.96), "Salem": (11.66, 78.15),
+    "Coimbatore": (11.02, 76.96), "Madurai": (9.93, 78.12), "Salem": (11.66, 78.15), "Tiruchirappalli": (10.79, 78.70),
     "Thiruvananthapuram": (8.52, 76.94), "Kochi": (9.93, 76.26), "Kozhikode": (11.26, 75.78), "Thrissur": (10.53, 76.21),
 }
 
@@ -38,7 +47,7 @@ def build():
     phc_id = 1
     for state, districts in STATES.items():
         for district in districts:
-            n_phc = rng.randint(3, 5)
+            n_phc = max(MIN_PHCS_PER_DISTRICT, round(REAL_PHC_COUNTS[district] * SCALE_FACTOR))
             clat, clon = DISTRICT_CENTERS[district]
             for i in range(n_phc):
                 beds = rng.choice([6, 10, 15, 20, 30])
@@ -130,7 +139,10 @@ def build():
     (OUT_DIR / "bed_history.json").write_text(json.dumps(bed_history))
     (OUT_DIR / "staff_history.json").write_text(json.dumps(staff_history))
     (OUT_DIR / "medicines.json").write_text(json.dumps(MEDICINES, indent=2))
-    print(f"Generated {len(phcs)} PHCs across {len(STATES)} states, {DAYS} days of history -> {OUT_DIR}")
+    print(
+        f"Generated {len(phcs)} PHCs across {len(STATES)} states, {DAYS} days of history "
+        f"(facility counts scaled {SCALE_FACTOR:.0%} of real district-level RHS PHC counts) -> {OUT_DIR}"
+    )
 
 
 if __name__ == "__main__":

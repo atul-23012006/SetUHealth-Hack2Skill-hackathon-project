@@ -3,7 +3,11 @@ multilingual assistant chat. Degrades gracefully to a deterministic templated
 mock when no GEMINI_API_KEY is configured, so the whole app is demoable
 before a key is issued - swapping in a real key requires no code changes.
 """
+import logging
+
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 _MODEL_NAME = "gemini-3.6-flash"
 _client_ready = False
@@ -22,13 +26,19 @@ if settings.gemini_api_key:
 LANG_NAMES = {"en": "English", "hi": "Hindi", "mr": "Marathi", "ta": "Tamil"}
 
 
-def _generate(prompt: str) -> str:
+def _generate(prompt: str) -> str | None:
     if _client_ready:
         try:
             response = _model.generate_content(prompt)
             return response.text.strip()
-        except Exception as exc:  # network/quota errors -> fall back rather than 500
-            return f"[AI temporarily unavailable, showing summary instead] {exc}"
+        except Exception:
+            # Network/quota/model errors: log the real cause server-side, but
+            # never surface raw API error text as if it were a generated
+            # answer - fall through to the deterministic mock templates below,
+            # same as the no-API-key path, so the UI degrades cleanly instead
+            # of showing a stack-trace-looking string to a health worker.
+            logger.warning("Gemini generation failed, falling back to mock", exc_info=True)
+            return None
     return None
 
 

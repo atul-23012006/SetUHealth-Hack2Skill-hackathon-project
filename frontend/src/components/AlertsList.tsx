@@ -45,9 +45,16 @@ export default function AlertsList({ alerts }: { alerts: Forecast[] }) {
                 <div className="font-medium text-slate-900 truncate">
                   {a.phc_name} <span className="text-slate-400 font-normal">· {a.district}, {a.state}</span>
                 </div>
-                <div className="text-sm text-slate-500">
-                  {a.medicine} —{" "}
-                  {a.days_to_stockout === 0 ? t("outOfStock") : `${a.days_to_stockout} ${t("daysLeft")}`}
+                <div className="text-sm text-slate-500 flex items-center gap-2 flex-wrap mt-0.5">
+                  <span>
+                    {a.medicine} —{" "}
+                    {a.days_to_stockout === 0 ? t("outOfStock") : `${a.days_to_stockout} ${t("daysLeft")}`}
+                  </span>
+                  {a.surge_detected && (
+                    <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100 uppercase tracking-wide">
+                      ⚠️ {t("demandSurge")}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">

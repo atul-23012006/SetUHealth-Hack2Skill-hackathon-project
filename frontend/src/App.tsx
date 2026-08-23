@@ -5,6 +5,7 @@ import StateView from "./pages/StateView";
 import PHCDetail from "./pages/PHCDetail";
 import Federated from "./pages/Federated";
 import Assistant from "./pages/Assistant";
+import Transfers from "./pages/Transfers";
 import { LangProvider } from "./lib/LangContext";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
             <Route path="states/:state" element={<StateView />} />
             <Route path="phcs/:id" element={<PHCDetail />} />
             <Route path="federated" element={<Federated />} />
+            <Route path="transfers" element={<Transfers />} />
             <Route path="assistant" element={<Assistant />} />
           </Route>
         </Routes>

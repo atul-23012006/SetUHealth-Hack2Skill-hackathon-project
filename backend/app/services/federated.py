@@ -19,18 +19,18 @@ Two levels are simulated, mirroring how this would run in production:
 """
 import random
 
-from app.services.store import PHCS, STOCK_HISTORY, PHC_BY_ID, MEDICINES
+from app.services import store
 from app.services.forecasting import forecast_all
 
 _PARTNER_SEED = 7
 
 
 def state_summary(state: str) -> dict:
-    phcs = [p for p in PHCS if p["state"] == state]
+    phcs = [p for p in store.PHCS if p["state"] == state]
     forecasts = [f for f in forecast_all(state=state)]
     by_category = {}
     for f in forecasts:
-        cat = STOCK_HISTORY[f["phc_id"]][f["medicine"]]["category"]
+        cat = store.STOCK_HISTORY[f["phc_id"]][f["medicine"]]["category"]
         by_category.setdefault(cat, []).append(f["daily_depletion_rate"])
     category_rates = {c: round(sum(v) / len(v), 3) for c, v in by_category.items() if v}
     critical = sum(1 for f in forecasts if f["risk"] == "critical")
@@ -47,11 +47,11 @@ def state_summary(state: str) -> dict:
 def national_federated_prior() -> dict:
     """Federated-average state summaries into a national model prior,
     weighted by each state's facility count."""
-    states = sorted({p["state"] for p in PHCS})
+    states = sorted({p["state"] for p in store.PHCS})
     summaries = [state_summary(s) for s in states]
     total_facilities = sum(s["facility_count"] for s in summaries)
 
-    categories = {m["category"] for m in MEDICINES}
+    categories = {m["category"] for m in store.MEDICINES}
     prior = {}
     for cat in categories:
         weighted_sum = 0.0
@@ -74,7 +74,7 @@ def national_federated_prior() -> dict:
 
 def _synthetic_partner_summary(nation: str, seed_offset: int) -> dict:
     rng = random.Random(_PARTNER_SEED + seed_offset)
-    categories = {m["category"] for m in MEDICINES}
+    categories = {m["category"] for m in store.MEDICINES}
     rates = {cat: round(rng.uniform(1.5, 9.0), 3) for cat in categories}
     return {
         "node": nation,
@@ -101,7 +101,7 @@ def brics_shared_prior() -> dict:
         "warning_alerts": sum(s["warning_alerts"] for s in india["node_summaries"]),
     }
     all_nodes = [india_node] + partners
-    categories = {m["category"] for m in MEDICINES}
+    categories = {m["category"] for m in store.MEDICINES}
     global_prior = {}
     for cat in categories:
         weighted_sum = sum(n["category_depletion_rates"].get(cat, 0) * n["facility_count"] for n in all_nodes)

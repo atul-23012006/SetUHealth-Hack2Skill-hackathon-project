@@ -71,4 +71,9 @@ def create_and_execute_transfer(
 
     transfers.append(manifest)
     save_transfers(transfers)
+
+    # Clear in-memory forecast cache
+    from app.services.forecasting import clear_forecast_cache
+    clear_forecast_cache()
+
     return manifest

@@ -87,6 +87,10 @@ def reset_store_data():
         except Exception:
             pass
 
+    # Clear in-memory forecast cache
+    from app.services.forecasting import clear_forecast_cache
+    clear_forecast_cache()
+
 
 def trigger_crisis(target_type: str, target_name: str, crisis_type: str):
     """Mutate stock levels and bed histories for target facilities to simulate a health crisis/outbreak."""
@@ -148,3 +152,7 @@ def trigger_crisis(target_type: str, target_name: str, crisis_type: str):
     # Save to disk to make the crisis effects survive restarts
     save_stock_history()
     save_bed_history()
+
+    # Clear in-memory forecast cache
+    from app.services.forecasting import clear_forecast_cache
+    clear_forecast_cache()

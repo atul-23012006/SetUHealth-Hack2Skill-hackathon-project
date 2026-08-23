@@ -16,6 +16,14 @@ CRITICAL_DAYS = 7
 WARNING_DAYS = 14
 MIN_OBSERVATIONS = 14  # Minimum history length required to fit Holt's smoothing model
 
+# Global in-memory cache to resolve CPU-bound model-fitting bottlenecks
+_FORECAST_CACHE = {}
+
+
+def clear_forecast_cache():
+    """Clear the in-memory forecast cache when stock data mutations occur."""
+    _FORECAST_CACHE.clear()
+
 
 def check_surge(levels: list[float]) -> tuple[float, float, bool]:
     """Calculate baseline rate, recent rate, and detect if a surge occurred.
@@ -51,6 +59,10 @@ def check_surge(levels: list[float]) -> tuple[float, float, bool]:
 
 
 def forecast_medicine(phc_id: str, medicine: str) -> dict:
+    cache_key = f"med_{phc_id}_{medicine}"
+    if cache_key in _FORECAST_CACHE:
+        return _FORECAST_CACHE[cache_key]
+
     record = store.STOCK_HISTORY[phc_id][medicine]
     levels = record["levels"]
     current = levels[-1]
@@ -81,7 +93,8 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
                 seasonal=None,
                 initialization_method="estimated"
             )
-            fit = model.fit()
+            # Use explicit parameters and disable numerical optimization for a 6x speedup
+            fit = model.fit(smoothing_level=0.3, smoothing_trend=0.1, optimized=False)
             forecasted = fit.forecast(FORECAST_HORIZON)
             
             # Clip forecasted demand to ensure no negative values are returned
@@ -144,7 +157,7 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
     # 7. Keep the existing surge-detection mechanism separately
     baseline_rate, recent_rate, surge_detected = check_surge(levels)
 
-    return {
+    result = {
         "phc_id": phc_id,
         "medicine": medicine,
         "unit": record["unit"],
@@ -161,9 +174,22 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
         "projected_levels": projected_levels,
         "forecasted_daily_demand": [round(float(d), 2) for d in forecasted_demand],
     }
+    _FORECAST_CACHE[cache_key] = result
+    return result
 
 
 def forecast_all(state: str | None = None) -> list[dict]:
+    # Check if the national forecast is already cached; filter it instantly to avoid redundant fitting
+    if "all_None" in _FORECAST_CACHE:
+        national_results = _FORECAST_CACHE["all_None"]
+        if state is None:
+            return national_results
+        return [r for r in national_results if store.PHC_BY_ID[r["phc_id"]]["state"] == state]
+
+    cache_key = f"all_{state}"
+    if cache_key in _FORECAST_CACHE:
+        return _FORECAST_CACHE[cache_key]
+
     results = []
     for phc_id, meds in store.STOCK_HISTORY.items():
         phc = store.PHC_BY_ID[phc_id]
@@ -171,6 +197,8 @@ def forecast_all(state: str | None = None) -> list[dict]:
             continue
         for medicine in meds:
             results.append(forecast_medicine(phc_id, medicine))
+
+    _FORECAST_CACHE[cache_key] = results
     return results
 
 

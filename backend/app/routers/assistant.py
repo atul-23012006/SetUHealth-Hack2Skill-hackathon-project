@@ -12,10 +12,31 @@ class ChatRequest(BaseModel):
     state: str | None = None
 
 
+def _top_alerts_diverse(state: str | None, per_state_cap: int = 3, total_cap: int = 24) -> list[dict]:
+    """Top alerts for the assistant's context. With no state filter, a flat
+    top-N would be dominated by whichever state happens to sort first among
+    ties (many facilities land on the same days-to-stockout value) - so a
+    query naming a specific state could see zero of that state's real
+    alerts. Capping per state instead guarantees every state is represented."""
+    alerts = forecasting.network_alerts(state)
+    if state:
+        return alerts[:total_cap]
+    per_state: dict[str, list[dict]] = {}
+    diverse: list[dict] = []
+    for a in alerts:
+        bucket = per_state.setdefault(a["state"], [])
+        if len(bucket) < per_state_cap:
+            bucket.append(a)
+            diverse.append(a)
+        if len(diverse) >= total_cap:
+            break
+    return diverse
+
+
 def _build_context(state: str | None) -> str:
-    alerts = forecasting.network_alerts(state)[:10]
+    alerts = _top_alerts_diverse(state)
     recs = redistribution.recommend_all(state)[:10]
-    lines = ["Top current stockout alerts:"]
+    lines = ["Current stockout alerts (sampled across states for coverage):"]
     for a in alerts:
         lines.append(
             f"- {a['phc_name']} ({a['district']}, {a['state']}): {a['medicine']} "

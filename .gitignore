@@ -10,3 +10,5 @@ frontend/.env
 frontend/.env.local
 
 .DS_Store
+
+graphify-out/

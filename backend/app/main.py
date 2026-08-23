@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import phc, forecast, alerts, redistribution, federated, assistant
+from app.routers import phc, forecast, alerts, redistribution, federated, assistant, crisis, transfers
 
 app = FastAPI(title="SetuHealth API", description="Federated national PHC resource management platform")
 
@@ -20,6 +20,8 @@ app.include_router(alerts.router)
 app.include_router(redistribution.router)
 app.include_router(federated.router)
 app.include_router(assistant.router)
+app.include_router(crisis.router)
+app.include_router(transfers.router)
 
 
 @app.get("/api/health")

@@ -28,6 +28,12 @@ export interface Medicine {
   unit: string;
   category: string;
   seasonal: string | null;
+  // Optional tier metadata provided by the backend reference data
+  tier?: number;
+  tier_title?: string;
+  tier_badge?: string;
+  tier_color?: string;
+  tier_description?: string;
 }
 
 export type Risk = "low" | "warning" | "critical";
@@ -46,6 +52,11 @@ export interface Forecast {
   phc_name?: string;
   state?: string;
   district?: string;
+  surge_detected?: boolean;
+  baseline_rate?: number;
+  forecast_method?: string;
+  projected_levels?: number[];
+  forecasted_daily_demand?: number[];
 }
 
 export interface RedistributionRec {
@@ -86,4 +97,28 @@ export interface BricsSharedPrior {
   note: string;
 }
 
+export interface Transfer {
+  id: string;
+  medicine: string;
+  unit: string;
+  from_phc_id: string;
+  from_phc_name: string;
+  from_state: string;
+  from_district: string;
+  to_phc_id: string;
+  to_phc_name: string;
+  to_state: string;
+  to_district: string;
+  quantity: number;
+  status: string;
+  created_at: string;
+}
+
+export interface ActiveCrisis {
+  target_type: string;
+  target_name: string;
+  crisis_type: string;
+}
+
 export type Lang = "en" | "hi" | "mr" | "ta";
+

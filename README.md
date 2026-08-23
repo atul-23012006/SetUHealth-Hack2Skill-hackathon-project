@@ -24,6 +24,57 @@ backend/   FastAPI (Python) — data, forecasting, redistribution, federated
            aggregation, and Gemini-powered GenAI endpoints
 ```
 
+```mermaid
+flowchart TB
+    subgraph SRC["Data Sources"]
+        RHS["Rural Health Statistics\n(NHM district PHC counts)"]
+        NLEM["NLEM essential medicines list"]
+    end
+
+    subgraph GEN["Data Generation (one-time)"]
+        GENPY["generate_data.py\n(deterministic synthetic 90-day dataset)"]
+        JSON[("generated/*.json\nphcs, stock, beds, staff")]
+    end
+
+    subgraph BACKEND["Backend — FastAPI"]
+        STORE["services/store.py\nin-memory store\n(single source of truth)"]
+        FORECAST["services/forecasting.py\nHolt's Linear Exp. Smoothing\n(+ moving-avg fallback, surge detection)"]
+        REDIST["services/redistribution.py\nPuLP LP optimizer\n(deficit vs surplus, haversine cost)"]
+        FED["services/federated.py\nstate to national to BRICS\naggregated priors"]
+        GENAI["services/genai.py\nGemini GenAI\n(mock fallback, no key needed)"]
+        ROUTERS["routers/*.py\nREST endpoints under /api/*"]
+    end
+
+    subgraph FRONTEND["Frontend — React + Vite"]
+        API["lib/api.ts (axios client)"]
+        PAGES["Dashboard / StateView / PHCDetail\nFederated / Transfers / Assistant"]
+    end
+
+    USER(["User"])
+
+    RHS --> GENPY
+    NLEM --> GENPY
+    GENPY --> JSON
+    JSON --> STORE
+
+    STORE --> FORECAST --> REDIST
+    STORE --> FED
+    STORE --> GENAI
+    FORECAST --> ROUTERS
+    REDIST --> ROUTERS
+    FED --> ROUTERS
+    GENAI --> ROUTERS
+
+    ROUTERS <--> API
+    API --> PAGES
+    PAGES --> USER
+
+    USER -- "execute transfer / trigger crisis" --> PAGES
+    PAGES -- "POST /api/transfers, /api/crisis" --> API
+    API --> ROUTERS
+    ROUTERS -- "mutate + invalidate forecast cache" --> STORE
+```
+
 - **Data**: a deterministic synthetic dataset (`backend/app/data/generate_data.py`)
   of 150+ PHCs across 6 real Indian states / 24 districts, 12 essential
   medicines (from India's NLEM), and 90 days of daily stock/bed/staff history
@@ -38,14 +89,19 @@ backend/   FastAPI (Python) — data, forecasting, redistribution, federated
   real counts so the demo stays fast and the map stays legible — the same
   generator scales linearly to the full real counts (and the full ~1.6 lakh
   PHC network) given real operational data feeds.
-- **Forecasting** (`backend/app/services/forecasting.py`): estimates each
-  PHC/medicine's net daily depletion rate from its trailing 14-day window and
-  projects days-to-stockout — flagging `critical` (≤7 days) and `warning`
-  (≤14 days) risk.
-- **Redistribution** (`backend/app/services/redistribution.py`): greedily
-  matches deficit facilities to the nearest facility with genuine surplus
-  (haversine distance, in-district/in-state preferred), capped by what the
-  donor can spare and what the recipient needs.
+- **Forecasting** (`backend/app/services/forecasting.py`): fits Holt's Linear
+  Exponential Smoothing (statsmodels, additive trend) over each PHC/medicine's
+  consumption history to project 14 days ahead, falling back to a trailing
+  14-day moving average when history is too short or the fit fails —
+  computing days-to-stockout and flagging `critical` (≤7 days) / `warning`
+  (≤14 days) risk, plus separate surge detection comparing recent vs baseline
+  consumption. Results are cached and invalidated whenever the store mutates.
+- **Redistribution** (`backend/app/services/redistribution.py`): solves a
+  linear program (PuLP, CBC solver) per medicine that splits PHCs into
+  deficit and surplus pools and picks transfers minimizing unmet deficit and
+  haversine-distance transport cost (with penalties for cross-district/
+  cross-state moves), capped by what the donor can spare and what the
+  recipient needs.
 - **Federated layer** (`backend/app/services/federated.py`): each state node
   computes local category-level summary statistics; the national server
   federated-averages them (weighted by facility count) into a national

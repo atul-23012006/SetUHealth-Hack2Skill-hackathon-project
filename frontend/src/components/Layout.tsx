@@ -30,6 +30,9 @@ export default function Layout() {
             <NavLink to="/federated" className={linkClass}>
               {t("federated")}
             </NavLink>
+            <NavLink to="/transfers" className={linkClass}>
+              {t("transfers")}
+            </NavLink>
             <NavLink to="/assistant" className={linkClass}>
               {t("assistant")}
             </NavLink>

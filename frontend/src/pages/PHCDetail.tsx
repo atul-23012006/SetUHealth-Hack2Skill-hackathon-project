@@ -8,7 +8,7 @@ import RiskBadge from "../components/RiskBadge";
 
 export default function PHCDetail() {
   const { id } = useParams<{ id: string }>();
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const [phc, setPhc] = useState<PHCDetailType | null>(null);
   const [medicine, setMedicine] = useState<string>("");
   const [forecast, setForecast] = useState<Forecast | null>(null);
@@ -96,6 +96,19 @@ export default function PHCDetail() {
                 ? "Stable"
                 : `${forecast.days_to_stockout} ${t("daysLeft")}`}
             </span>
+          </div>
+        )}
+        {forecast && forecast.surge_detected && (
+          <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-900 rounded-xl p-3 flex gap-2.5 items-start shadow-sm animate-fade-in">
+            <span className="text-base mt-0.5">⚠️</span>
+            <div className="space-y-0.5">
+              <h4 className="font-semibold text-rose-800 text-xs uppercase tracking-wider">{t("demandSurge")}</h4>
+              <p className="text-xs text-rose-700 leading-relaxed">
+                {t("surgeText")}
+                <br />
+                Recent Daily Consumption: <span className="font-bold">{forecast.daily_depletion_rate}</span> {forecast.unit}/day vs. Historical Baseline: <span className="font-bold">{forecast.baseline_rate}</span> {forecast.unit}/day.
+              </p>
+            </div>
           </div>
         )}
         <ResponsiveContainer width="100%" height={220}>

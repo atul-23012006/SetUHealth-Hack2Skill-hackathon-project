@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useLang } from "../lib/LangContext";
-import type { PHC, Forecast, RedistributionRec, Risk } from "../lib/types";
+import type { PHC, Forecast, RedistributionRec, Risk, ActiveCrisis } from "../lib/types";
 import StatCard from "../components/StatCard";
 import IndiaMap from "../components/IndiaMap";
 import AlertsList from "../components/AlertsList";
@@ -17,20 +17,73 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState<Forecast[]>([]);
   const [recs, setRecs] = useState<RedistributionRec[]>([]);
   const [stateList, setStateList] = useState<Record<string, string[]>>({});
+  const [activeCrises, setActiveCrises] = useState<ActiveCrisis[]>([]);
+  const [medicines, setMedicines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([api.phcs(), api.forecastAll(), api.alerts(undefined, 8), api.redistribution(), api.states()]).then(
-      ([p, f, a, r, s]) => {
+  // UI state for medicines -> states reverse stats
+  const [expandedMeds, setExpandedMeds] = useState<Record<string, boolean>>({});
+  const navigate = useNavigate();
+
+  // Crisis form state
+  const [targetType, setTargetType] = useState<"state" | "district">("district");
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [crisisType, setCrisisType] = useState("Dengue Outbreak");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const loadData = (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    Promise.all([
+      api.phcs(),
+      api.forecastAll(),
+      api.alerts(undefined, 8),
+      api.redistribution(),
+      api.states(),
+      api.activeCrises(),
+      api.medicines(),
+    ])
+      .then(([p, f, a, r, s, ac, m]) => {
         setPhcs(p);
         setForecasts(f);
         setAlerts(a);
         setRecs(r.slice(0, 8));
         setStateList(s);
+        setActiveCrises(ac);
+        setMedicines(m || []);
+
+        // Auto-select first state and district if empty
+        const statesKeys = Object.keys(s);
+        if (statesKeys.length > 0) {
+          if (!selectedState || !statesKeys.includes(selectedState)) {
+            setSelectedState(statesKeys[0]);
+            const districts = s[statesKeys[0]] || [];
+            if (districts.length > 0) {
+              setSelectedDistrict(districts[0]);
+            }
+          }
+        }
         setLoading(false);
-      }
-    );
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    loadData(true);
   }, []);
+
+  // Update district dropdown when state changes
+  useEffect(() => {
+    if (selectedState && stateList[selectedState]) {
+      const districts = stateList[selectedState];
+      if (districts.length > 0 && !districts.includes(selectedDistrict)) {
+        setSelectedDistrict(districts[0]);
+      }
+    }
+  }, [selectedState, stateList]);
 
   const riskByPhc = useMemo(() => {
     const map: Record<string, Risk> = {};
@@ -50,6 +103,65 @@ export default function Dashboard() {
     });
   }, [stateList, phcs, riskByPhc]);
 
+  // Aggregate forecasts to provide per-medicine per-state statistics without extra API calls
+  const medStateAggregates = useMemo(() => {
+    // structure: { [medName]: { [state]: { total_current, total_capacity, criticalCount, warningCount, phcCount } } }
+    const map: Record<
+      string,
+      Record<string, { total_current: number; total_capacity: number; criticalCount: number; warningCount: number; phcCount: number }>
+    > = {};
+    for (const f of forecasts) {
+      const m = f.medicine;
+      const st = f.state || "";
+      if (!map[m]) map[m] = {};
+      if (!map[m][st]) map[m][st] = { total_current: 0, total_capacity: 0, criticalCount: 0, warningCount: 0, phcCount: 0 };
+      map[m][st].total_current += f.current_level ?? 0;
+      map[m][st].total_capacity += f.capacity ?? 0;
+      map[m][st].phcCount += 1;
+      if (f.risk === "critical") map[m][st].criticalCount += 1;
+      if (f.risk === "warning") map[m][st].warningCount += 1;
+    }
+    return map;
+  }, [forecasts]);
+
+  const handleToggleMed = (name: string) => {
+    setExpandedMeds((s) => ({ ...s, [name]: !s[name] }));
+  };
+
+  const openStateModal = (medicine: string, state: string) => {
+    // navigate to the detailed medicine-state statistics page
+    navigate(`/medicines/${encodeURIComponent(medicine)}/states/${encodeURIComponent(state)}`);
+  };
+
+  const handleTriggerCrisis = async () => {
+    const targetName = targetType === "state" ? selectedState : selectedDistrict;
+    if (!targetName) return;
+
+    setActionLoading(true);
+    try {
+      await api.triggerCrisis(targetType, targetName, crisisType);
+      loadData(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to trigger crisis.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setActionLoading(true);
+    try {
+      await api.resetCrisis();
+      loadData(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to reset database.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const criticalCount = forecasts.filter((f) => f.risk === "critical").length;
   const warningCount = forecasts.filter((f) => f.risk === "warning").length;
   const avgBeds = phcs.length
@@ -63,6 +175,104 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Crisis Simulator Panel */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+            <span>🚨 {t("crisisSimulator")}</span>
+            {activeCrises.length > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 animate-pulse border border-rose-200">
+                {activeCrises.length} {t("activeCrisesLabel")}
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-slate-500">
+            Inject health emergencies to simulate stockouts, bed surges, and redistribution triggers.
+          </div>
+          {activeCrises.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {activeCrises.map((c, idx) => (
+                <span
+                  key={idx}
+                  className="inline-block bg-rose-50 border border-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded-md font-medium"
+                >
+                  {c.crisis_type} ({c.target_name})
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Target Type Selector */}
+          <select
+            value={targetType}
+            onChange={(e) => setTargetType(e.target.value as "state" | "district")}
+            className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium"
+          >
+            <option value="district">{t("district")}</option>
+            <option value="state">{t("states")}</option>
+          </select>
+
+          {/* State Selector */}
+          <select
+            value={selectedState}
+            onChange={(e) => setSelectedState(e.target.value)}
+            className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium"
+          >
+            {Object.keys(stateList).map((st) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
+
+          {/* District Selector (conditional) */}
+          {targetType === "district" && selectedState && stateList[selectedState] && (
+            <select
+              value={selectedDistrict}
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+              className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium"
+            >
+              {(stateList[selectedState] || []).map((dst) => (
+                <option key={dst} value={dst}>
+                  {dst}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Crisis Type Selector */}
+          <select
+            value={crisisType}
+            onChange={(e) => setCrisisType(e.target.value)}
+            className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium text-rose-700"
+          >
+            <option value="Dengue Outbreak">Dengue Outbreak</option>
+            <option value="Malaria Outbreak">Malaria Outbreak</option>
+            <option value="Monsoon Floods">Monsoon Floods</option>
+          </select>
+
+          <button
+            onClick={handleTriggerCrisis}
+            disabled={actionLoading}
+            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md cursor-pointer disabled:opacity-50"
+          >
+            {actionLoading ? "..." : t("trigger")}
+          </button>
+
+          {activeCrises.length > 0 && (
+            <button
+              onClick={handleReset}
+              disabled={actionLoading}
+              className="bg-slate-600 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md cursor-pointer disabled:opacity-50"
+            >
+              {t("reset")}
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard label={t("totalPhcs")} value={phcs.length} />
         <StatCard label={t("criticalAlerts")} value={criticalCount} tone="critical" />
@@ -111,9 +321,87 @@ export default function Dashboard() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <div className="text-sm font-semibold text-slate-700 mb-1">{t("redistributionRecs")}</div>
-          <RedistributionList recs={recs} />
+          <RedistributionList recs={recs} medicines={medicines} onTransferExecuted={() => loadData(false)} />
         </div>
       </div>
+
+      {/* Medicines panel showing tier, badge and description from reference data */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-semibold text-slate-700">Medicines</div>
+          <div className="text-xs text-slate-500">Reference priorities from backend</div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {medicines.map((m) => (
+            <div key={m.name} className="p-3 border rounded-md">
+              <div className="flex items-start gap-3">
+                <div>
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded"
+                    style={{ backgroundColor: m.tier_color || "#ddd", color: "#fff" }}
+                  >
+                    {m.tier_badge || m.tier_title || ""}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-slate-800">{m.name}</div>
+                  <div className="text-xs text-slate-500">
+                    {m.unit} · {m.category} {m.seasonal ? `· ${m.seasonal}` : ""}
+                  </div>
+                  {m.tier_description && <div className="text-xs text-slate-600 mt-1">{m.tier_description}</div>}
+                </div>
+                <div className="shrink-0">
+                  <button
+                    onClick={() => handleToggleMed(m.name)}
+                    className="text-xs px-2 py-1 rounded-md border bg-slate-50 text-slate-700"
+                  >
+                    {expandedMeds[m.name] ? "Hide states" : "Show states"}
+                  </button>
+                </div>
+              </div>
+
+              {/* expanded per-state stats for this medicine */}
+              {expandedMeds[m.name] && (
+                <div className="mt-3 grid grid-cols-1 gap-2">
+                  {Object.keys(stateList).map((st) => {
+                    const agg = (medStateAggregates[m.name] || {})[st];
+                    if (!agg) return null;
+                    const pct = agg.total_capacity ? Math.round((agg.total_current / agg.total_capacity) * 100) : 0;
+                    return (
+                      <div
+                        key={st}
+                        className="flex items-center justify-between p-2 rounded-md hover:bg-slate-50 cursor-pointer"
+                        onClick={() => openStateModal(m.name, st)}
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-slate-800">{st}</div>
+                          <div className="text-xs text-slate-500">
+                            {agg.phcCount} PHCs · {agg.total_current} {m.unit} of {agg.total_capacity} capacity ({pct}%)
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {agg.criticalCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
+                              {agg.criticalCount}
+                            </span>
+                          )}
+                          {agg.warningCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                              {agg.warningCount}
+                            </span>
+                          )}
+                          <div className="text-xs text-slate-400">{pct}%</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -62,6 +62,16 @@ def explain_alert(alert: dict, lang: str = "en") -> str:
             f"lagbhag {alert['days_to_stockout']} dinon mein khatam ho sakti hai. "
             f"Turant punah-poorti ya nikatvarti PHC se stock transfer ki sifarish ki jaati hai."
         ),
+        "mr": (
+            f"{alert['phc_name']} ({alert['district']}, {alert['state']}) मध्ये चालू वापरानुसार "
+            f"{alert['medicine']} चा साठा सुमारे {alert['days_to_stockout']} दिवस शिल्लक आहे. "
+            f"त्वरित पुनर्रचना किंवा जवळच्या अतिरिक्त सुविधा केंद्रातून स्टॉक ट्रान्सफर करण्याची शिफारस केली जाते."
+        ),
+        "ta": (
+            f"{alert['phc_name']} ({alert['district']}, {alert['state']}) இல் தற்போதைய பயன்பாட்டின் படி "
+            f"{alert['medicine']} மருந்து இன்னும் சுமார் {alert['days_to_stockout']} நாட்களுக்கு மட்டுமே இருக்கும். "
+            f"உடனடியாக புதிய விநியோகம் அல்லது அருகிலுள்ள உபரி சுகாதார மையத்திலிருந்து மருந்து மாற்ற பரிந்துரைக்கப்படுகிறது."
+        ),
     }
     return templates.get(lang, templates["en"])
 
@@ -80,7 +90,11 @@ def chat_reply(query: str, context_summary: str, lang: str = "en") -> str:
     if generated:
         return generated
 
-    return (
-        f"(Offline demo mode - connect a Gemini API key for live answers.) "
-        f"Based on current data: {context_summary[:400]}"
-    )
+    offline_msgs = {
+        "en": "(Offline demo mode - connect a Gemini API key for live answers.) Based on current data:\n",
+        "hi": "(ऑफलाइन डेमो मोड - लाइव उत्तरों के लिए जेमिनी एपीआई की कनेक्ट करें।) वर्तमान डेटा के आधार पर:\n",
+        "mr": "(ऑफलाइन डेमो मोड - थेट उत्तरांसाठी जेमिनी एपीआई की कनेक्ट करा.) सध्याच्या माहितीच्या आधारे:\n",
+        "ta": "(ஆஃப்லைன் டெமோ பயன்முறை - நேரடி பதில்களுக்கு ஜெமினி ஏபிஐ விசையை இணைக்கவும்.) தற்போதைய தரவுகளின் அடிப்படையில்:\n",
+    }
+    intro = offline_msgs.get(lang, offline_msgs["en"])
+    return f"{intro}{context_summary[:400]}"

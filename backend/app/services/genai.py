@@ -5,7 +5,7 @@ before a key is issued - swapping in a real key requires no code changes.
 """
 from app.config import settings
 
-_MODEL_NAME = "gemini-2.0-flash"
+_MODEL_NAME = "gemini-3.6-flash"
 _client_ready = False
 
 if settings.gemini_api_key:

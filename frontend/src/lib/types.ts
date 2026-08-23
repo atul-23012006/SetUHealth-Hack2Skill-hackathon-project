@@ -28,6 +28,12 @@ export interface Medicine {
   unit: string;
   category: string;
   seasonal: string | null;
+  // Optional tier metadata provided by the backend reference data
+  tier?: number;
+  tier_title?: string;
+  tier_badge?: string;
+  tier_color?: string;
+  tier_description?: string;
 }
 
 export type Risk = "low" | "warning" | "critical";

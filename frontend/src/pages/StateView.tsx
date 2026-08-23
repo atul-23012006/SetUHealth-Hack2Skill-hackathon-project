@@ -12,15 +12,17 @@ export default function StateView() {
   const [phcs, setPhcs] = useState<PHC[]>([]);
   const [alerts, setAlerts] = useState<Forecast[]>([]);
   const [recs, setRecs] = useState<RedistributionRec[]>([]);
+  const [medicines, setMedicines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!state) return;
     setLoading(true);
-    Promise.all([api.phcs(state), api.alerts(state, 20), api.redistribution(state)]).then(([p, a, r]) => {
+    Promise.all([api.phcs(state), api.alerts(state, 20), api.redistribution(state), api.medicines()]).then(([p, a, r, m]) => {
       setPhcs(p);
       setAlerts(a);
       setRecs(r);
+      setMedicines(m || []);
       setLoading(false);
     });
   }, [state]);
@@ -72,7 +74,7 @@ export default function StateView() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <div className="text-sm font-semibold text-slate-700 mb-1">{t("redistributionRecs")}</div>
-          <RedistributionList recs={recs} />
+          <RedistributionList recs={recs} medicines={medicines} />
         </div>
       </div>
     </div>

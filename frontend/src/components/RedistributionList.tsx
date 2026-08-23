@@ -1,17 +1,22 @@
 import { useState } from "react";
-import type { RedistributionRec } from "../lib/types";
+import type { RedistributionRec, Medicine } from "../lib/types";
 import { useLang } from "../lib/LangContext";
 import { api } from "../lib/api";
 import RiskBadge from "./RiskBadge";
 
 interface Props {
   recs: RedistributionRec[];
+  medicines?: Medicine[];
   onTransferExecuted?: () => void;
 }
 
-export default function RedistributionList({ recs, onTransferExecuted }: Props) {
+export default function RedistributionList({ recs, medicines, onTransferExecuted }: Props) {
   const { t } = useLang();
   const [executingIndex, setExecutingIndex] = useState<number | null>(null);
+
+  // Build a quick lookup for medicine metadata by name
+  const medMap = new Map<string, Medicine>();
+  (medicines || []).forEach((m) => medMap.set(m.name, m));
 
   const handleExecute = async (r: RedistributionRec, index: number) => {
     setExecutingIndex(index);
@@ -37,8 +42,21 @@ export default function RedistributionList({ recs, onTransferExecuted }: Props) 
       {recs.map((r, i) => (
         <div key={i} className="py-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-medium text-slate-900">
-              {r.quantity} {r.unit} · {r.medicine}
+            <div className="font-medium text-slate-900 flex items-center gap-2">
+              <div>{r.quantity} {r.unit} ·</div>
+              <div className="flex items-center gap-2 truncate">
+                {/* Tier badge from medicine metadata if available */}
+                {medMap.has(r.medicine) ? (
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded"
+                    style={{ backgroundColor: medMap.get(r.medicine)?.tier_color || "#ddd", color: "#fff" }}
+                    title={medMap.get(r.medicine)?.tier_description || ""}
+                  >
+                    {medMap.get(r.medicine)?.tier_badge || medMap.get(r.medicine)?.tier_title}
+                  </span>
+                ) : null}
+                <span className="truncate">{r.medicine}</span>
+              </div>
             </div>
             <div className="text-sm text-slate-500 truncate">
               {t("from")} <span className="font-medium text-slate-700">{r.from_phc_name}</span> ({r.from_state}) →{" "}

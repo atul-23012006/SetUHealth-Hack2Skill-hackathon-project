@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useLang } from "../lib/LangContext";
 import type { PHC, Forecast, RedistributionRec, Risk, ActiveCrisis } from "../lib/types";
@@ -18,7 +18,12 @@ export default function Dashboard() {
   const [recs, setRecs] = useState<RedistributionRec[]>([]);
   const [stateList, setStateList] = useState<Record<string, string[]>>({});
   const [activeCrises, setActiveCrises] = useState<ActiveCrisis[]>([]);
+  const [medicines, setMedicines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // UI state for medicines -> states reverse stats
+  const [expandedMeds, setExpandedMeds] = useState<Record<string, boolean>>({});
+  const navigate = useNavigate();
 
   // Crisis form state
   const [targetType, setTargetType] = useState<"state" | "district">("district");
@@ -36,14 +41,16 @@ export default function Dashboard() {
       api.redistribution(),
       api.states(),
       api.activeCrises(),
+      api.medicines(),
     ])
-      .then(([p, f, a, r, s, ac]) => {
+      .then(([p, f, a, r, s, ac, m]) => {
         setPhcs(p);
         setForecasts(f);
         setAlerts(a);
         setRecs(r.slice(0, 8));
         setStateList(s);
         setActiveCrises(ac);
+        setMedicines(m || []);
 
         // Auto-select first state and district if empty
         const statesKeys = Object.keys(s);
@@ -95,6 +102,36 @@ export default function Dashboard() {
       return { state, count: statePhcs.length, critical, warning };
     });
   }, [stateList, phcs, riskByPhc]);
+
+  // Aggregate forecasts to provide per-medicine per-state statistics without extra API calls
+  const medStateAggregates = useMemo(() => {
+    // structure: { [medName]: { [state]: { total_current, total_capacity, criticalCount, warningCount, phcCount } } }
+    const map: Record<
+      string,
+      Record<string, { total_current: number; total_capacity: number; criticalCount: number; warningCount: number; phcCount: number }>
+    > = {};
+    for (const f of forecasts) {
+      const m = f.medicine;
+      const st = f.state || "";
+      if (!map[m]) map[m] = {};
+      if (!map[m][st]) map[m][st] = { total_current: 0, total_capacity: 0, criticalCount: 0, warningCount: 0, phcCount: 0 };
+      map[m][st].total_current += f.current_level ?? 0;
+      map[m][st].total_capacity += f.capacity ?? 0;
+      map[m][st].phcCount += 1;
+      if (f.risk === "critical") map[m][st].criticalCount += 1;
+      if (f.risk === "warning") map[m][st].warningCount += 1;
+    }
+    return map;
+  }, [forecasts]);
+
+  const handleToggleMed = (name: string) => {
+    setExpandedMeds((s) => ({ ...s, [name]: !s[name] }));
+  };
+
+  const openStateModal = (medicine: string, state: string) => {
+    // navigate to the detailed medicine-state statistics page
+    navigate(`/medicines/${encodeURIComponent(medicine)}/states/${encodeURIComponent(state)}`);
+  };
 
   const handleTriggerCrisis = async () => {
     const targetName = targetType === "state" ? selectedState : selectedDistrict;
@@ -284,9 +321,87 @@ export default function Dashboard() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <div className="text-sm font-semibold text-slate-700 mb-1">{t("redistributionRecs")}</div>
-          <RedistributionList recs={recs} onTransferExecuted={() => loadData(false)} />
+          <RedistributionList recs={recs} medicines={medicines} onTransferExecuted={() => loadData(false)} />
         </div>
       </div>
+
+      {/* Medicines panel showing tier, badge and description from reference data */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-semibold text-slate-700">Medicines</div>
+          <div className="text-xs text-slate-500">Reference priorities from backend</div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {medicines.map((m) => (
+            <div key={m.name} className="p-3 border rounded-md">
+              <div className="flex items-start gap-3">
+                <div>
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded"
+                    style={{ backgroundColor: m.tier_color || "#ddd", color: "#fff" }}
+                  >
+                    {m.tier_badge || m.tier_title || ""}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-slate-800">{m.name}</div>
+                  <div className="text-xs text-slate-500">
+                    {m.unit} · {m.category} {m.seasonal ? `· ${m.seasonal}` : ""}
+                  </div>
+                  {m.tier_description && <div className="text-xs text-slate-600 mt-1">{m.tier_description}</div>}
+                </div>
+                <div className="shrink-0">
+                  <button
+                    onClick={() => handleToggleMed(m.name)}
+                    className="text-xs px-2 py-1 rounded-md border bg-slate-50 text-slate-700"
+                  >
+                    {expandedMeds[m.name] ? "Hide states" : "Show states"}
+                  </button>
+                </div>
+              </div>
+
+              {/* expanded per-state stats for this medicine */}
+              {expandedMeds[m.name] && (
+                <div className="mt-3 grid grid-cols-1 gap-2">
+                  {Object.keys(stateList).map((st) => {
+                    const agg = (medStateAggregates[m.name] || {})[st];
+                    if (!agg) return null;
+                    const pct = agg.total_capacity ? Math.round((agg.total_current / agg.total_capacity) * 100) : 0;
+                    return (
+                      <div
+                        key={st}
+                        className="flex items-center justify-between p-2 rounded-md hover:bg-slate-50 cursor-pointer"
+                        onClick={() => openStateModal(m.name, st)}
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-slate-800">{st}</div>
+                          <div className="text-xs text-slate-500">
+                            {agg.phcCount} PHCs · {agg.total_current} {m.unit} of {agg.total_capacity} capacity ({pct}%)
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {agg.criticalCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
+                              {agg.criticalCount}
+                            </span>
+                          )}
+                          {agg.warningCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                              {agg.warningCount}
+                            </span>
+                          )}
+                          <div className="text-xs text-slate-400">{pct}%</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }

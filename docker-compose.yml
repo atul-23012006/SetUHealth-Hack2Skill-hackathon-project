@@ -1,0 +1,41 @@
+# One-command local bring-up:  docker compose up --build
+#
+#   Frontend (nginx static build) -> http://localhost:8080
+#   Backend  (FastAPI + uvicorn)  -> http://localhost:8000  (docs at /docs)
+#
+# The backend's generated dataset + SQLite ledger live on a named volume, so
+# transfers, the crisis log and the audit trail survive `docker compose down`.
+# Set GEMINI_API_KEY in a .env file next to this one for live Gemini answers;
+# without it the app runs in its deterministic offline-mock mode.
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - backend_data:/app/app/data/generated
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the static bundle at build time; the browser calls this
+        # URL directly, so it must be reachable from the host, not the compose
+        # network. Override for a real deployment.
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:

@@ -9,7 +9,13 @@ import random
 from datetime import date, timedelta
 from pathlib import Path
 
-from app.data.reference import STATES, MEDICINES, STAFF_ROLES, REAL_PHC_COUNTS
+# Trailing window (days) over which a handful of facilities are given a
+# deliberate consumption-vs-footfall inconsistency, so the anomaly detector
+# (app/services/anomaly.py) has real signal to surface in a demo.
+ANOMALY_WINDOW = 21
+N_ANOMALIES = 6
+
+from app.data.reference import STATES, MEDICINES, STAFF_ROLES, REAL_PHC_COUNTS, REAL_CONSUMPTION_ANCHORS
 
 SEED = 42
 DAYS = 90
@@ -80,6 +86,7 @@ def build():
     stock_history = {}   # phc_id -> medicine -> {dates, levels, capacity, reorder_level}
     bed_history = {}      # phc_id -> {dates, occupied}
     staff_history = {}    # phc_id -> {dates, attendance_pct}
+    footfall_history = {}  # phc_id -> {visits}  (daily OPD patient visits)
 
     for phc in phcs:
         pid = phc["id"]
@@ -89,7 +96,10 @@ def build():
         # --- medicine stock ---
         stock_history[pid] = {}
         for med in MEDICINES:
-            base_daily_use = rng.uniform(2, 10)
+            # Use real-world grounded consumption anchors (NHSRC DLMIS / WHO India)
+            # with Gaussian noise around the published mean — clipped to a positive minimum.
+            anchor = REAL_CONSUMPTION_ANCHORS.get(med["name"], {"mean": 5.0, "std": 1.5})
+            base_daily_use = max(0.3, rng.gauss(anchor["mean"], anchor["std"]))
             capacity = round(base_daily_use * rng.uniform(25, 45))
             reorder_level = round(capacity * 0.25)
             level = capacity * rng.uniform(0.5, 0.95)
@@ -133,15 +143,81 @@ def build():
             att.append(val)
         staff_history[pid] = {"attendance_pct": att}
 
+        # --- OPD footfall (daily patient visits) ---
+        # Loosely scales with facility size; underserved (stressed) PHCs draw a
+        # larger catchment, "surplus" PHCs a lighter one. Weekends dip sharply,
+        # monsoon/summer lift OPD load. This is the independent patient-volume
+        # signal the anomaly detector reconciles medicine consumption against.
+        base_opd = max(6.0, rng.gauss(9.0 + phc["beds_total"] * 0.9, 5.0))
+        opd_stress_mult = 1.15 if stress else (0.9 if surplus_bias else 1.0)
+        visits = []
+        for d_iso in all_dates:
+            month = int(d_iso[5:7])
+            season = SEASON_BY_MONTH[month]
+            seasonal_opd = 1.25 if season in ("monsoon", "summer") else 1.0
+            weekday = date.fromisoformat(d_iso).weekday()  # Mon=0 .. Sun=6
+            weekday_mult = 0.3 if weekday == 6 else (0.65 if weekday == 5 else 1.0)
+            val = base_opd * opd_stress_mult * seasonal_opd * weekday_mult * rng.uniform(0.8, 1.2)
+            visits.append(max(0, round(val)))
+        footfall_history[pid] = {"visits": visits}
+
+    # --- inject deterministic consumption anomalies -----------------------------
+    # A few facilities get a trailing-window inconsistency between recorded
+    # medicine consumption and patient footfall: "pilferage" burns stock far
+    # faster than visits justify; "underreport" shows almost no book movement
+    # despite steady OPD load (data-entry failure or diversion). The detector
+    # in anomaly.py rediscovers these from the ratio distribution alone.
+    n_days = len(all_dates)
+    w0 = max(0, n_days - ANOMALY_WINDOW)
+    anomaly_candidates = [p["id"] for p in phcs]
+    rng.shuffle(anomaly_candidates)
+    high_volume_meds = [
+        "Paracetamol 500mg", "ORS Sachets", "Amoxicillin 500mg",
+        "Iron Folic Acid Tablets", "Metformin 500mg",
+    ]
+    anomaly_flags = {}
+    for i, pid in enumerate(anomaly_candidates[:N_ANOMALIES]):
+        atype = "pilferage" if i % 2 == 0 else "underreport"
+        meds_hit = [m for m in high_volume_meds if m in stock_history[pid]][:2]
+        if not meds_hit:
+            continue
+        for med in meds_hit:
+            rec = stock_history[pid][med]
+            levels = rec["levels"]
+            cap = rec["capacity"]
+            rebuilt = [levels[w0]]
+            for idx in range(w0 + 1, n_days):
+                delta = levels[idx] - levels[idx - 1]  # <0 consumption, >0 restock
+                if delta < 0:
+                    delta *= 2.4 if atype == "pilferage" else 0.3
+                val = min(cap, max(0.0, rebuilt[-1] + delta))
+                rebuilt.append(round(val, 1))
+            levels[w0:] = rebuilt
+        anomaly_flags[pid] = {
+            "type": atype,
+            "medicines": meds_hit,
+            "since": all_dates[w0],
+        }
+
     (OUT_DIR / "dates.json").write_text(json.dumps(all_dates))
     (OUT_DIR / "phcs.json").write_text(json.dumps(phcs, indent=2))
     (OUT_DIR / "stock_history.json").write_text(json.dumps(stock_history))
     (OUT_DIR / "bed_history.json").write_text(json.dumps(bed_history))
     (OUT_DIR / "staff_history.json").write_text(json.dumps(staff_history))
+    (OUT_DIR / "footfall_history.json").write_text(json.dumps(footfall_history))
+    (OUT_DIR / "anomaly_flags.json").write_text(json.dumps(anomaly_flags, indent=2))
     (OUT_DIR / "medicines.json").write_text(json.dumps(MEDICINES, indent=2))
     print(
         f"Generated {len(phcs)} PHCs across {len(STATES)} states, {DAYS} days of history "
         f"(facility counts scaled {SCALE_FACTOR:.0%} of real district-level RHS PHC counts) -> {OUT_DIR}"
+    )
+    print(
+        f"Injected {len(anomaly_flags)} consumption-vs-footfall anomalies over the "
+        f"trailing {ANOMALY_WINDOW} days for the anomaly detector to surface."
+    )
+    print(
+        "Consumption anchors grounded in: NHSRC DLMIS 2022-23, WHO/UNICEF India PHC "
+        "Essential Medicines benchmarks, ICMR NCD Survey 2023, NVBDCP DLMIS 2022."
     )
 
 

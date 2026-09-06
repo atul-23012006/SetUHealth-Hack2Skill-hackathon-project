@@ -42,41 +42,67 @@ of disconnected PHCs.*
 
 ## 4. What We Built
 **SetuHealth**: a working end-to-end platform covering the full loop —
-detect → forecast → explain → recommend → (soon) act.
+detect → forecast → explain → recommend → **act** — with a one-click crisis
+simulation that runs the entire loop live in ~15 seconds.
 
-- Live dashboard across 101 PHCs, 6 states, 24 districts
-- Predictive stockout forecasting per PHC per medicine
-- Automated cross-district/cross-state redistribution recommendations
-- Gemini-powered natural-language alert explanations + multilingual voice
-  assistant
+- Live dashboard across 150+ PHCs, 6 states, 24 districts
+- Predictive stockout forecasting per PHC per medicine, **with ±1σ prediction
+  intervals**
+- Automated cross-district/cross-state redistribution recommendations —
+  medicine **and** beds/staff
+- **Consumption-integrity detection**: flags PHCs whose stock usage doesn't
+  match patient footfall (pilferage / broken registers)
+- Gemini-powered natural-language justifications on every transfer and every
+  anomaly + a multilingual voice assistant (English, Hindi, Marathi, Tamil)
 - A federated aggregation layer, demoed at both state→national and
-  national→BRICS scale
+  national→BRICS scale, with a live raw-data-blocked toggle
+- SQLite-backed transactional ledger + audit trail — state survives restarts
 
-*Screenshot: Dashboard page.*
-
----
-
-## 5. How It Works — Data & Forecasting
-- Every PHC reports medicine stock, bed occupancy, and staff attendance
-  (in production: via existing HMIS/e-Aushadhi integrations; in this demo:
-  a realistic 90-day synthetic dataset seeded from India's National List of
-  Essential Medicines).
-- Forecasting model estimates each PHC/medicine's real depletion rate from
-  recent usage and projects days-to-stockout, flagging Critical (≤7 days)
-  and Warning (≤14 days) risk — explainable, not a black box.
-
-*Screenshot: PHC detail page with stock chart + 14-day forecast.*
+*Screenshot: Dashboard mid crisis-simulation, red banner active.*
 
 ---
 
-## 6. How It Works — Redistribution Engine
-- For every at-risk medicine, the engine finds the nearest facility with
+## 5. How It Works — The Crisis Loop (lead with this in the demo)
+- One click ("Run Demo", or the manual Crisis Simulator) injects an outbreak
+  or flood into a chosen state/district.
+- Forecasts recompute and flip facilities to critical; countdown clocks jump
+  from weeks to days; the redistribution engine re-solves; the co-pilot
+  executes the top transfer and logs a manifest — all live, in ~15 seconds.
+- This is the single most convincing artifact: the whole detect → forecast →
+  recommend → act loop, visible end-to-end.
+
+*Screenshot: Dashboard during a simulated Monsoon Floods crisis.*
+
+---
+
+## 6. How It Works — Data & Forecasting
+- Every PHC reports medicine stock, bed occupancy, staff attendance, and OPD
+  footfall (in production: via existing HMIS/e-Aushadhi integrations; in this
+  demo: a realistic 90-day synthetic dataset with per-district PHC counts and
+  per-medicine consumption rates grounded in published Indian sources — Rural
+  Health Statistics, NHSRC DLMIS, WHO/UNICEF India, ICMR, NVBDCP).
+- Forecasting uses Holt's linear exponential smoothing on each PHC/medicine's
+  real depletion rate, projects days-to-stockout, and returns a **±1σ
+  prediction interval** — explainable, not a black box.
+
+*Screenshot: PHC detail page with stock chart + 14-day forecast + CI band.*
+
+---
+
+## 7. How It Works — Redistribution + Integrity
+- For every at-risk medicine, an LP optimiser finds the nearest facility with
   genuine surplus and recommends a specific transfer — quantity, distance,
-  urgency — preferring in-district and in-state moves first.
+  urgency — preferring in-district and in-state moves first. The same
+  nearest-surplus matching now also covers **bed overflow and staff
+  shortages**.
+- **Consumption-integrity detection** independently reconciles each PHC's
+  medicine drawdown against its patient footfall and flags the outliers —
+  over-consumption (pilferage/leakage) or under-reporting (broken registers) —
+  rediscovered from the network distribution, not from labels.
 - This turns "we're out of stock" into "here is the truck route that fixes
-  it," before the emergency escalates.
+  it" — and "this facility's numbers can't be trusted, go check it."
 
-*Screenshot: Redistribution Recommendations panel.*
+*Screenshot: Redistribution + Consumption Anomalies panels.*
 
 ---
 

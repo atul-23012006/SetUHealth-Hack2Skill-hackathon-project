@@ -1,64 +1,83 @@
 # Demo Video Script (target: 4 minutes)
 
 Record the browser directly (screen capture) against the running app. Keep
-narration conversational, not read-aloud-slide-deck.
+narration conversational, not read-aloud-slide-deck. The spine of the demo is
+the **crisis-simulation flow** — everything else hangs off it.
 
-## 0:00–0:30 — Hook + Problem
-"India runs its public healthcare frontline through Primary Health Centres —
-but there's no real-time way to know which one is about to run out of a
-critical medicine, until a patient shows up and it's too late. We built
-SetuHealth to fix that — and to make the same system shareable across
-BRICS nations."
+## 0:00–0:25 — Hook + Problem
+"India runs its public healthcare frontline through 1.6 lakh Primary Health
+Centres — but there's no real-time way to know which one is about to run out
+of a critical medicine until a patient shows up and it's too late. SetuHealth
+gives a health ministry that view, predicts the stockouts before they happen,
+and tells you exactly which facility should resupply which — and it's built to
+extend across BRICS nations."
 
-*(Show Problem Statement / title slide briefly, then cut to the live app.)*
+*(Title slide for 3 seconds, then cut to the live Dashboard.)*
 
-## 0:30–1:15 — Dashboard walkthrough
-Navigate to the Dashboard.
-"This is a live national view — 101 PHCs across 6 states today, but the
-architecture scales to the full network. Every dot is a facility, colored
-by real-time stockout risk. [Point out stat cards.] We're already seeing
-73 critical alerts and 134 warnings network-wide, computed from actual
-usage trends, not fixed thresholds."
+## 0:25–1:30 — Crisis simulation (the core loop)
+Start on the Dashboard. Point at the map and the stat cards — "This is a live
+national view, 150-plus PHCs across 6 states, every dot coloured by real-time
+stockout risk from a genuine forecast."
 
-## 1:15–2:00 — Forecasting + PHC detail
-Click into a critical PHC.
-"Here's Pune PHC 1 — completely out of Artesunate, the anti-malarial.
-[Point at stock chart.] You can see the sawtooth pattern of normal restocks
-breaking down here — this facility stopped getting resupplied reliably.
-[Point at 14-day forecast.] This is a genuine forecast, not a static rule:
-we estimate the real depletion rate from the last two weeks of usage and
-project it forward."
+Click **🎬 Run Demo** (top right). Narrate as the scripted flow runs:
+1. "It resets to a clean baseline…"
+2. "…then injects a Monsoon Floods emergency across Bihar. Watch the map."
+3. "Forecasts recompute — facilities flip to critical, the countdown clocks
+   at the top now show ORS and Paracetamol running out in days, not weeks."
+4. "The redistribution engine has already recomputed, and the co-pilot
+   auto-executes the top transfer — a real manifest, logged to the ledger."
+5. "And it settles. That whole detect → forecast → recommend → act loop just
+   ran in fifteen seconds."
 
-## 2:00–2:45 — Redistribution + GenAI explanation
-Back to Dashboard, click "Explain with AI" on an alert.
-"Instead of just flagging the problem, Gemini turns it into something a
-district officer can act on immediately — [read the generated explanation].
-And the redistribution engine has already found the fix: [point to
-Redistribution panel] — transfer this quantity from the nearest facility
-with genuine surplus, prioritizing in-state moves."
+Then: "You can also drive this by hand —" open the **Crisis Simulator** panel,
+pick a district, a crisis type, hit **🚨 Simulate Outbreak**, show the red
+banner and the elevated alerts. Hit **Reset Simulation**.
 
-## 2:45–3:30 — Multilingual voice assistant
-Go to Assistant page, switch language to Hindi, click the mic, ask a
-question by voice (e.g., "बिहार में कौन से PHC को तुरंत दवा चाहिए").
-"Field staff don't need to read a dashboard — they can just ask, in their
-own language, by voice. [Wait for reply, let TTS play if audio is on.]"
+## 1:30–2:05 — Forecasting + confidence + PHC detail
+Click into a critical PHC. "Here's the stock history — you can see the normal
+restock sawtooth breaking down. Below it, the 14-day forecast: Holt's
+exponential smoothing on the real depletion rate, and the shaded band is the
+±1σ prediction interval — the model tells you how sure it is, not just a
+single line."
 
-## 3:30–4:00 — Federated network + close
-Navigate to Federated Network page.
-"Every state node shares only aggregated statistics upward — never raw
-facility or patient data. [Point at BRICS chart.] The exact same mechanism
-lets India, Brazil, South Africa, and other BRICS nations build a shared
-predictive model together, without anyone's raw health data crossing a
-border. That's SetuHealth — real-time, predictive, actionable, and built to
-scale from one district to an entire federation of nations."
+## 2:05–2:45 — Redistribution + GenAI justification + anomaly detection
+Back to the Dashboard redistribution panel. Click **🧠 Why?** on a transfer —
+"Gemini turns the optimiser's choice into something a district officer can act
+on: why this donor, this quantity, this urgency."
+
+Scroll to **🕵️ Consumption Anomalies**. "Separately, the platform reconciles
+each PHC's medicine consumption against its patient footfall. These facilities
+are burning stock far faster — or slower — than their patient volume can
+explain: possible pilferage, or a broken stock register. Click Investigate and
+Gemini writes the verification step."
+
+Glance at **🏥 Capacity Redistribution** next to it — "and it's not just
+medicine — bed overflow and staff shortages get the same nearest-surplus
+matching."
+
+## 2:45–3:20 — Multilingual voice assistant
+Go to the Assistant page. Switch the language selector to **தமிழ்** (or
+Hindi/Marathi), click the mic, ask by voice, e.g. "பீகாரில் எந்த PHC-க்கு
+உடனடியாக மருந்து தேவை". "Four languages today — English, Hindi, Marathi,
+Tamil — same scaffolding scales to every scheduled language. Field staff just
+ask, in their own language, by voice."
+
+## 3:20–4:00 — Federated privacy + close
+Navigate to the Federated Network page. Toggle **🚫 Show Raw Data (blocked)** —
+"raw patient and facility records physically cannot cross a node boundary;
+watch the links break." Toggle back. "Only aggregated model weights flow —
+state → national, and the identical mechanism national → BRICS. India, Brazil,
+South Africa build a shared predictive model without a data-sharing treaty for
+raw records. That's SetuHealth — real-time, predictive, explainable,
+auditable, and built to scale from one district to a federation of nations."
 
 ---
 
 ### Recording checklist
-- [ ] Both backend (`uvicorn`) and frontend (`npm run dev`) running before
+- [ ] Backend (`uvicorn` or `docker compose up`) and frontend running before
       recording starts.
-- [ ] Set a Gemini API key beforehand if you want live (not mock) AI replies
-      on camera — check the response by asking one question before hitting
-      record.
+- [ ] Run `Reset Simulation` once so you start from a clean baseline.
+- [ ] Set a `GEMINI_API_KEY` beforehand for live (not mock) AI replies — test
+      one explanation and one assistant question before hitting record.
 - [ ] Mute other tabs/notifications; use a clean browser profile.
 - [ ] Zoom browser to ~100–110% so charts/text are legible on a phone screen.

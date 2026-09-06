@@ -56,6 +56,18 @@ const en: Dict = {
   noActiveCrises: "No active crises.",
   demandSurge: "Demand Surge",
   surgeText: "Rapid demand surge detected: consumption increased by 1.5x+ over historical baseline.",
+  consumptionAnomalies: "Consumption Anomalies",
+  consumptionAnomaliesSub: "PHCs whose recorded stock usage does not match patient footfall",
+  capacityRedistribution: "Capacity Redistribution — Beds & Staff",
+  capacityRedistributionSub: "Bed-overflow diversions and staff-shortage support across nearby facilities",
+  auditTrail: "Audit Trail",
+  investigate: "Investigate",
+  noAnomalies: "No consumption anomalies detected — usage is consistent with footfall.",
+  noCapacityRecs: "No bed or staff redistribution needed right now.",
+  divertPatients: "divert",
+  lendStaff: "lend",
+  overConsumption: "Over-consumption",
+  underReporting: "Under-reporting",
 };
 
 const hi: Dict = {
@@ -112,6 +124,18 @@ const hi: Dict = {
   noActiveCrises: "कोई सक्रिय संकट नहीं है।",
   demandSurge: "मांग में तेजी",
   surgeText: "तेजी से मांग में वृद्धि का पता चला: खपत ऐतिहासिक आधार रेखा की तुलना में 1.5 गुना अधिक है।",
+  consumptionAnomalies: "खपत विसंगतियाँ",
+  consumptionAnomaliesSub: "ऐसे PHC जिनकी दर्ज स्टॉक खपत मरीज़ों की संख्या से मेल नहीं खाती",
+  capacityRedistribution: "क्षमता पुनःवितरण — बिस्तर एवं स्टाफ",
+  capacityRedistributionSub: "निकटवर्ती केंद्रों के बीच बिस्तर अधिभार और स्टाफ की कमी का समाधान",
+  auditTrail: "ऑडिट रिकॉर्ड",
+  investigate: "जाँच करें",
+  noAnomalies: "कोई खपत विसंगति नहीं मिली — उपयोग मरीज़ संख्या के अनुरूप है।",
+  noCapacityRecs: "अभी बिस्तर या स्टाफ पुनःवितरण की आवश्यकता नहीं है।",
+  divertPatients: "भेजें",
+  lendStaff: "उधार दें",
+  overConsumption: "अधिक खपत",
+  underReporting: "कम रिपोर्टिंग",
 };
 
 const mr: Dict = {
@@ -168,6 +192,18 @@ const mr: Dict = {
   noActiveCrises: "कोणतेही सक्रिय संकट नाही.",
   demandSurge: "मागणीत वाढ",
   surgeText: "मागणीमध्ये वेगवान वाढ झाली आहे: वापर ऐतिहासिक बेसलाईनपेक्षा १.५ पट जास्त आहे.",
+  consumptionAnomalies: "वापरातील विसंगती",
+  consumptionAnomaliesSub: "ज्या PHC चा नोंदवलेला साठा वापर रुग्णसंख्येशी जुळत नाही",
+  capacityRedistribution: "क्षमता पुनर्वितरण — बेड आणि कर्मचारी",
+  capacityRedistributionSub: "जवळच्या केंद्रांमध्ये बेड ओव्हरफ्लो आणि कर्मचारी कमतरतेवर उपाय",
+  auditTrail: "ऑडिट नोंद",
+  investigate: "तपास करा",
+  noAnomalies: "वापरात कोणतीही विसंगती आढळली नाही — वापर रुग्णसंख्येशी सुसंगत आहे.",
+  noCapacityRecs: "सध्या बेड किंवा कर्मचारी पुनर्वितरणाची गरज नाही.",
+  divertPatients: "पाठवा",
+  lendStaff: "उधार द्या",
+  overConsumption: "अति वापर",
+  underReporting: "कमी नोंद",
 };
 
 const ta: Dict = {
@@ -224,6 +260,18 @@ const ta: Dict = {
   noActiveCrises: "செயலில் உள்ள சவால்கள் இல்லை.",
   demandSurge: "தேவை அதிகரிப்பு",
   surgeText: "விரைவான தேவை அதிகரிப்பு கண்டறியப்பட்டது: நுகர்வு வரலாற்று அடிப்படையை விட 1.5 மடங்கு அதிகமாக உள்ளது.",
+  consumptionAnomalies: "நுகர்வு முரண்பாடுகள்",
+  consumptionAnomaliesSub: "பதிவு செய்யப்பட்ட இருப்பு பயன்பாடு நோயாளர் வருகையுடன் பொருந்தாத PHC-கள்",
+  capacityRedistribution: "கொள்ளளவு மறுவிநியோகம் — படுக்கைகள் & ஊழியர்கள்",
+  capacityRedistributionSub: "அருகிலுள்ள மையங்களிடையே படுக்கை நிரம்பல் மற்றும் ஊழியர் பற்றாக்குறை ஆதரவு",
+  auditTrail: "தணிக்கை பதிவு",
+  investigate: "விசாரிக்கவும்",
+  noAnomalies: "நுகர்வு முரண்பாடு எதுவும் இல்லை — பயன்பாடு வருகையுடன் ஒத்துள்ளது.",
+  noCapacityRecs: "இப்போது படுக்கை அல்லது ஊழியர் மறுவிநியோகம் தேவையில்லை.",
+  divertPatients: "அனுப்பு",
+  lendStaff: "கடன் தரவும்",
+  overConsumption: "அதிக நுகர்வு",
+  underReporting: "குறை பதிவு",
 };
 
 const dicts: Record<Lang, Dict> = { en, hi, mr, ta };

@@ -1,34 +1,18 @@
-import json
 import uuid
 from datetime import datetime
 
-from app.data.generate_data import OUT_DIR
-from app.services import store
-
-TRANSFERS_FILE = OUT_DIR / "transfers.json"
+from app.services import db, store
 
 
 def load_transfers() -> list[dict]:
-    """Load all transfer manifests from disk."""
-    if not TRANSFERS_FILE.exists():
-        return []
-    try:
-        return json.loads(TRANSFERS_FILE.read_text())
-    except Exception:
-        return []
-
-
-def save_transfers(transfers: list[dict]):
-    """Save all transfer manifests to disk."""
-    TRANSFERS_FILE.write_text(json.dumps(transfers, indent=2))
+    """Load all transfer manifests from the SQLite ledger (newest first)."""
+    return db.list_transfers()
 
 
 def create_and_execute_transfer(
     from_phc_id: str, to_phc_id: str, medicine: str, quantity: float
 ) -> dict:
     """Execute a stock redistribution transfer by modifying store levels and logging the manifest."""
-    transfers = load_transfers()
-
     from_phc = store.PHC_BY_ID.get(from_phc_id)
     to_phc = store.PHC_BY_ID.get(to_phc_id)
 
@@ -69,8 +53,8 @@ def create_and_execute_transfer(
         "created_at": datetime.now().isoformat(),
     }
 
-    transfers.append(manifest)
-    save_transfers(transfers)
+    # Persist the manifest to the SQLite ledger (also writes an audit-log row)
+    db.record_transfer(manifest)
 
     # Clear in-memory forecast cache
     from app.services.forecasting import clear_forecast_cache

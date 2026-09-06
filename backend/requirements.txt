@@ -6,5 +6,6 @@ numpy>=2.1
 google-generativeai==0.8.3
 python-dotenv==1.0.1
 pulp==2.9.0
-statsmodels==0.14.2
-pandas==2.2.2
+# Lower bounds (not exact pins) so wheels resolve on both Python 3.12 and 3.13
+statsmodels>=0.14.4
+pandas>=2.2.3

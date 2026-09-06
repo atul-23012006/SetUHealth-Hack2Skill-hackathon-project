@@ -96,13 +96,22 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
             # Use explicit parameters and disable numerical optimization for a 6x speedup
             fit = model.fit(smoothing_level=0.3, smoothing_trend=0.1, optimized=False)
             forecasted = fit.forecast(FORECAST_HORIZON)
-            
+
             # Clip forecasted demand to ensure no negative values are returned
             forecasted_demand = np.clip(forecasted, 0.0, None)
             forecast_method = "exponential_smoothing"
+
+            # Compute RMSE on in-sample residuals to build confidence intervals
+            in_sample = fit.fittedvalues
+            residuals = np.array(consumption, dtype=float) - in_sample
+            rmse = float(np.sqrt(np.mean(residuals ** 2)))
+            forecast_rmse = rmse  # 1-sigma interval
         except Exception:
             # Fallback to moving average if fitting fails (e.g. constant/zero demand or singular matrix)
             forecast_method = "fallback"
+            forecast_rmse = None
+    else:
+        forecast_rmse = None
 
     # 3. Fallback Heuristic (Moving average)
     if forecasted_demand is None:
@@ -113,13 +122,24 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
                 active_consumption.append(max(0.0, levels[i - 1] - levels[i]))
         fallback_rate = float(np.mean(active_consumption[-TREND_WINDOW:])) if active_consumption else 0.0
         forecasted_demand = np.array([fallback_rate] * FORECAST_HORIZON)
+        # Fallback interval: ±15% of the point estimate
+        forecast_rmse = fallback_rate * 0.15
 
     # 4. Project future inventory using the forecasted consumption
     projected_levels = []
+    forecast_lower = []  # upper confidence band (less demand -> higher inventory)
+    forecast_upper = []  # lower confidence band (more demand -> lower inventory)
     level = current
+    level_lower = current
+    level_upper = current
     for d_demand in forecasted_demand:
+        sigma = forecast_rmse if forecast_rmse else 0.0
         level = max(0.0, level - d_demand)
+        level_lower = max(0.0, level_lower - max(0.0, d_demand - sigma))  # optimistic: less demand
+        level_upper = max(0.0, level_upper - (d_demand + sigma))  # pessimistic: more demand
         projected_levels.append(round(level, 1))
+        forecast_lower.append(round(level_upper, 1))  # lower inventory = upper demand bound
+        forecast_upper.append(round(level_lower, 1))  # higher inventory = lower demand bound
 
     # 5. Calculate predicted days to breach the safety threshold (reorder level)
     days_to_stockout = None
@@ -157,8 +177,16 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
     # 7. Keep the existing surge-detection mechanism separately
     baseline_rate, recent_rate, surge_detected = check_surge(levels)
 
+    is_cold_chain = medicine in ("Insulin (Human)", "Oxytocin Injection")
+    temperature = store.get_facility_temp(phc_id) if is_cold_chain else None
+    cold_chain_alert = (temperature > 8.0 or temperature < 2.0) if is_cold_chain else False
+
+    phc = store.PHC_BY_ID[phc_id]
     result = {
         "phc_id": phc_id,
+        "phc_name": phc["name"],
+        "state": phc["state"],
+        "district": phc["district"],
         "medicine": medicine,
         "unit": record["unit"],
         "current_level": current,
@@ -172,7 +200,11 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
         "baseline_rate": round(baseline_rate, 2),
         "forecast_method": forecast_method,
         "projected_levels": projected_levels,
+        "forecast_lower": forecast_lower,
+        "forecast_upper": forecast_upper,
         "forecasted_daily_demand": [round(float(d), 2) for d in forecasted_demand],
+        "temperature": temperature,
+        "cold_chain_alert": cold_chain_alert,
     }
     _FORECAST_CACHE[cache_key] = result
     return result
@@ -211,9 +243,4 @@ def network_alerts(state: str | None = None) -> list[dict]:
             f["days_to_stockout"] if f["days_to_stockout"] is not None else 999,
         )
     )
-    for a in alerts:
-        phc = store.PHC_BY_ID[a["phc_id"]]
-        a["phc_name"] = phc["name"]
-        a["state"] = phc["state"]
-        a["district"] = phc["district"]
     return alerts

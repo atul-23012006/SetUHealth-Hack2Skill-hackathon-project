@@ -77,31 +77,48 @@ flowchart TB
 
 - **Data**: a deterministic synthetic dataset (`backend/app/data/generate_data.py`)
   of 150+ PHCs across 6 real Indian states / 24 districts, 12 essential
-  medicines (from India's NLEM), and 90 days of daily stock/bed/staff history
-  with realistic seasonal demand spikes (e.g. anti-malarials in monsoon) and
-  a subset of facilities deliberately under supply stress — so forecasting
-  and redistribution have real signal to act on. Per-district facility
-  counts are not arbitrary: they're generated proportionally from the real
-  number of functioning PHCs in each district, per the Ministry of Health &
-  Family Welfare / National Health Mission's official [Rural Health
-  Statistics — District-wise Availability of Health Centres in India](https://www.nhm.gov.in/images/pdf/monitoring/rhs/district-wise-health-centres.pdf)
-  (`backend/app/data/reference.py::REAL_PHC_COUNTS`), scaled to 10% of the
-  real counts so the demo stays fast and the map stays legible — the same
-  generator scales linearly to the full real counts (and the full ~1.6 lakh
-  PHC network) given real operational data feeds.
+  medicines (from India's NLEM), and 90 days of daily stock / bed / staff /
+  OPD-footfall history with realistic seasonal demand spikes (e.g.
+  anti-malarials in monsoon) and a subset of facilities deliberately under
+  supply stress — so forecasting and redistribution have real signal to act
+  on. Two things are grounded in published sources rather than invented:
+  per-district facility counts are generated proportionally from the real
+  number of functioning PHCs in each district (Ministry of Health & Family
+  Welfare / NHM [Rural Health Statistics — District-wise Availability of
+  Health Centres](https://www.nhm.gov.in/images/pdf/monitoring/rhs/district-wise-health-centres.pdf),
+  `reference.py::REAL_PHC_COUNTS`, scaled to 10% for demo speed), and
+  per-medicine daily consumption is drawn around published mean/std anchors
+  from NHSRC DLMIS 2022-23, WHO/UNICEF India PHC benchmarks, the ICMR NCD
+  Survey and NVBDCP indent data (`reference.py::REAL_CONSUMPTION_ANCHORS`).
+  A handful of facilities are also given a deliberate consumption-vs-footfall
+  inconsistency over the trailing 21 days for the anomaly detector to surface.
+  The same generator scales linearly to the full real counts (and the full
+  ~1.6 lakh PHC network) given real operational data feeds.
 - **Forecasting** (`backend/app/services/forecasting.py`): fits Holt's Linear
   Exponential Smoothing (statsmodels, additive trend) over each PHC/medicine's
   consumption history to project 14 days ahead, falling back to a trailing
   14-day moving average when history is too short or the fit fails —
   computing days-to-stockout and flagging `critical` (≤7 days) / `warning`
   (≤14 days) risk, plus separate surge detection comparing recent vs baseline
-  consumption. Results are cached and invalidated whenever the store mutates.
+  consumption. It also returns a **±1σ prediction interval** (from in-sample
+  RMSE) that the PHC-detail chart renders as an uncertainty band around the
+  stockout line. Results are cached and invalidated whenever the store mutates.
 - **Redistribution** (`backend/app/services/redistribution.py`): solves a
   linear program (PuLP, CBC solver) per medicine that splits PHCs into
   deficit and surplus pools and picks transfers minimizing unmet deficit and
   haversine-distance transport cost (with penalties for cross-district/
   cross-state moves), capped by what the donor can spare and what the
-  recipient needs.
+  recipient needs. Every recommended transfer can be expanded into a
+  Gemini-written justification (deficit size, spare units, distance, urgency).
+  The same nearest-surplus matching also covers **bed overflow and staff
+  shortages**, not just medicine (`recommend_capacity`).
+- **Consumption-integrity detection** (`backend/app/services/anomaly.py`):
+  reconciles each PHC's medicine drawdown against its OPD patient footfall
+  over a trailing 21-day window and flags facilities whose ratio is a robust
+  outlier (median/MAD z-score) — `over_consumption` (possible pilferage or
+  write-offs booked as dispensing) or `under_reporting` (registers not kept).
+  The generator seeds a handful of such inconsistencies; the detector
+  rediscovers them from the network distribution alone.
 - **Federated layer** (`backend/app/services/federated.py`): each state node
   computes local category-level summary statistics; the national server
   federated-averages them (weighted by facility count) into a national
@@ -109,15 +126,35 @@ flowchart TB
   nodes (Brazil, South Africa, and observer nations) into a BRICS-wide
   shared prior — only aggregates ever cross a node boundary.
 - **GenAI** (`backend/app/services/genai.py`): Google Gemini generates
-  plain-language stockout explanations and powers a chat assistant answering
-  questions about the live network, in English or Hindi (extensible to any
-  language), with browser-based voice input/output. Runs in a graceful
-  offline mock mode with no API key so the app is fully demoable before a
-  key is provisioned.
+  plain-language stockout explanations, transfer justifications, and anomaly
+  investigator notes, and powers a chat assistant answering questions about
+  the live network — in English, Hindi, Marathi or Tamil (same scaffolding
+  extends to any language), with browser-based voice input/output. Runs in a
+  graceful offline mock mode with no API key so the app is fully demoable
+  before a key is provisioned.
+- **Persistence** (`backend/app/services/db.py`): the in-memory store stays
+  the hot read path, but executed transfers, the crisis log, and a full audit
+  trail of every state mutation are written to a SQLite database — so an
+  active crisis, the transfer ledger, and the audit history all survive a
+  backend restart. The audit trail is visible on the Transfers page.
 
 ## Running locally
 
-### Backend
+### One command (Docker)
+
+```bash
+cp .env.example .env   # optional: add GEMINI_API_KEY for live answers
+docker compose up --build
+```
+
+- Frontend: http://localhost:8080
+- Backend + API docs: http://localhost:8000/docs
+
+The backend's generated dataset and SQLite ledger live on a named volume, so
+transfers, the crisis log and the audit trail persist across
+`docker compose down`.
+
+### Backend (without Docker)
 
 ```bash
 cd backend

@@ -1,19 +1,27 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useLang } from "../lib/LangContext";
-import type { Transfer } from "../lib/types";
+import type { Transfer, AuditEvent } from "../lib/types";
+
+const KIND_STYLE: Record<string, string> = {
+  transfer: "bg-teal-50 text-teal-700 border-teal-100",
+  crisis: "bg-rose-50 text-rose-700 border-rose-100",
+};
 
 export default function Transfers() {
   const { t } = useLang();
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [audit, setAudit] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const fetchTransfers = () => {
     setLoading(true);
-    api.listTransfers().then((data) => {
+    Promise.all([api.listTransfers(), api.auditLog(60)]).then(([data, log]) => {
       // Sort newest first
       data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setTransfers(data);
+      setAudit(log);
       setLoading(false);
     });
   };
@@ -21,6 +29,18 @@ export default function Transfers() {
   useEffect(() => {
     fetchTransfers();
   }, []);
+
+  const handleDownloadFhir = async (transferId: string) => {
+    setDownloadingId(transferId);
+    try {
+      await api.downloadFhir(transferId);
+    } catch (err) {
+      console.error("FHIR export failed", err);
+      alert("FHIR export failed. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   if (loading) return <div className="text-center text-slate-400 py-20">{t("loading")}</div>;
 
@@ -33,12 +53,17 @@ export default function Transfers() {
             Tracking cross-district and cross-facility stock distributions executed across the grid.
           </p>
         </div>
-        <button
-          onClick={fetchTransfers}
-          className="text-sm px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50 cursor-pointer"
-        >
-          🔄 Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg font-medium">
+            📋 FHIR R4 export available per transfer
+          </div>
+          <button
+            onClick={fetchTransfers}
+            className="text-sm px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50 cursor-pointer"
+          >
+            🔄 Refresh
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -58,6 +83,7 @@ export default function Transfers() {
                   <th className="px-6 py-3">Recipient Facility</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3">Date / Time</th>
+                  <th className="px-6 py-3">Export</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -88,11 +114,58 @@ export default function Transfers() {
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {new Date(tr.created_at).toLocaleString()}
                     </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => handleDownloadFhir(tr.id)}
+                        disabled={downloadingId === tr.id}
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border font-semibold transition-all cursor-pointer bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 disabled:opacity-50"
+                        title="Export as FHIR R4 SupplyRequest"
+                      >
+                        {downloadingId === tr.id ? "..." : "📋 FHIR R4"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+
+      {/* SQLite-backed audit trail — every transfer, crisis and reset */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">🧾 {t("auditTrail")}</h2>
+            <p className="text-[11px] text-slate-400">
+              Persisted in SQLite — survives backend restarts
+            </p>
+          </div>
+          <span className="text-[10px] text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded font-medium">
+            {audit.length} events
+          </span>
+        </div>
+        {audit.length === 0 ? (
+          <div className="text-center py-8 text-slate-400 text-sm">No mutations recorded yet.</div>
+        ) : (
+          <ol className="relative border-l border-slate-200 ml-2 space-y-3">
+            {audit.map((e, i) => (
+              <li key={i} className="ml-4">
+                <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full bg-slate-300 border-2 border-white" />
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${
+                      KIND_STYLE[e.kind] || "bg-slate-50 text-slate-600 border-slate-200"
+                    }`}
+                  >
+                    {e.kind}
+                  </span>
+                  <span className="text-[11px] text-slate-400">{new Date(e.ts).toLocaleString()}</span>
+                </div>
+                <div className="text-sm text-slate-700 mt-0.5">{e.summary}</div>
+              </li>
+            ))}
+          </ol>
         )}
       </div>
     </div>

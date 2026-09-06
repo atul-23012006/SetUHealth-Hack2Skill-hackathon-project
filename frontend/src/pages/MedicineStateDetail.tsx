@@ -13,7 +13,6 @@ export default function MedicineStateDetail() {
   const { t } = useLang();
 
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
-  const [phcs, setPhcs] = useState<PHCDetailType[]>([]);
   const [loading, setLoading] = useState(true);
 
   // selected PHC to show PHC-detail-like view
@@ -24,15 +23,11 @@ export default function MedicineStateDetail() {
   useEffect(() => {
     if (!medicine || !state) return;
     setLoading(true);
-    Promise.all([api.forecastAll(), api.phcs(state)])
-      .then(async ([allForecasts, phcList]) => {
+    api.forecastAll()
+      .then((allForecasts) => {
         // filter forecasts for this medicine & state
         const items = allForecasts.filter((f) => f.medicine === medicine && f.state === state);
         setForecasts(items);
-        // phcList contains PHC minimal info - fetch detail only when selected
-        // but we can map minimal info into phcs list for left column
-        // we'll fetch PHC detail on selection
-        setPhcs(phcList as any);
         setLoading(false);
       })
       .catch((err) => {
@@ -166,11 +161,21 @@ export default function MedicineStateDetail() {
                   </div>
 
                   {selectedForecast && (
-                    <div className="mb-2 flex items-center gap-2 text-sm text-slate-600">
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
                       <RiskBadge risk={selectedForecast.risk} />
                       <span>
                         {selectedForecast.days_to_stockout === null ? "Stable" : `${selectedForecast.days_to_stockout} ${t("daysLeft")}`}
                       </span>
+                      {selectedForecast.temperature !== undefined && selectedForecast.temperature !== null && (
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1 ${
+                          selectedForecast.cold_chain_alert
+                            ? "bg-rose-100 text-rose-800 border border-rose-300 animate-pulse"
+                            : "bg-blue-50 text-blue-700 border border-blue-200"
+                        }`}>
+                          ❄️ Cold Chain: {selectedForecast.temperature}°C
+                          {selectedForecast.cold_chain_alert && " (ALERT: Exceeded 8.0°C)"}
+                        </span>
+                      )}
                     </div>
                   )}
 
@@ -190,7 +195,16 @@ export default function MedicineStateDetail() {
 
                 {forecastChartData.length > 0 && (
                   <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <div className="text-sm font-semibold text-slate-700 mb-2">Forecast</div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm font-semibold text-slate-700">Forecast</div>
+                      {selectedForecast?.forecast_method && (
+                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-medium">
+                          {selectedForecast.forecast_method === "exponential_smoothing"
+                            ? "Holt's Exponential Smoothing"
+                            : "Moving Average (fallback)"}
+                        </span>
+                      )}
+                    </div>
                     <ResponsiveContainer width="100%" height={180}>
                       <LineChart data={forecastChartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" />

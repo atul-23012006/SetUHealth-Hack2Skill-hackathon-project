@@ -14,6 +14,9 @@ from app.services.forecasting import forecast_all, forecast_medicine
 
 SURPLUS_MARGIN_DAYS = 25  # no risk before this many days => can be a donor
 MIN_SPARE_FRACTION = 0.35  # keep at least this fraction of capacity as buffer
+MAX_DONOR_LOAD = 2.0  # a facility may donate at most this many "full medicines'
+# worth" of spare, summed as a fraction-of-spare across every medicine it's
+# recommended to donate in one pass — see _apply_cross_medicine_donor_cap
 
 
 def _haversine_km(a, b) -> float:
@@ -263,10 +266,70 @@ def recommend_capacity(state: str | None = None) -> dict:
     return {"beds": recommend_beds(state), "staff": recommend_staff(state)}
 
 
+def _donor_load_fraction(rec: dict) -> float:
+    """Fraction of the donor's computed spare (for that one medicine) this
+    single recommendation consumes — dimensionless and therefore comparable
+    across medicines with different units (tablets, ml, sachets...), unlike
+    summing raw quantities."""
+    stock = store.STOCK_HISTORY.get(rec["from_phc_id"], {}).get(rec["medicine"])
+    if not stock:
+        return 0.0
+    current_level = stock["levels"][-1]
+    capacity = stock.get("capacity") or 1.0
+    spare = max(current_level - capacity * MIN_SPARE_FRACTION, 0.1)
+    return rec["quantity"] / spare
+
+
+def _apply_cross_medicine_donor_cap(recs: list[dict]) -> list[dict]:
+    """Post-hoc check across every medicine's independently-solved LP.
+
+    ``recommend_for_medicine`` builds and solves its own LP per medicine,
+    with its own ``Donor_Spare`` constraint capping how much a facility can
+    give up *for that one medicine only*. Nothing stops the same facility
+    being picked as a donor for several medicines at once, so summed across
+    every medicine's recommendations a single facility could be asked to
+    give away far more than it can safely spare in aggregate, even though
+    each individual LP pass judged it safe in isolation.
+
+    This aggregates each donor's total load (see ``_donor_load_fraction``)
+    across every medicine it's recommended to donate in this pass, and if a
+    facility is over ``MAX_DONOR_LOAD`` once summed, drops its
+    lowest-priority (non-critical), smallest-quantity recommendations first
+    until it's back under the cap. Facilities evacuating a failing cold
+    chain are exempt — that's a "move it before it spoils" constraint, not a
+    spare-capacity one."""
+    if not recs:
+        return recs
+
+    by_phc: dict[str, list[dict]] = {}
+    for r in recs:
+        if r["from_phc_id"] in store.COLD_CHAIN_FAILURES:
+            continue
+        by_phc.setdefault(r["from_phc_id"], []).append(r)
+
+    dropped = set()
+    for phc_id, phc_recs in by_phc.items():
+        total_load = sum(_donor_load_fraction(r) for r in phc_recs)
+        if total_load <= MAX_DONOR_LOAD:
+            continue
+        trimmable = sorted(
+            (r for r in phc_recs if r["urgency"] != "critical"),
+            key=lambda r: r["quantity"],
+        )
+        for r in trimmable:
+            if total_load <= MAX_DONOR_LOAD:
+                break
+            total_load -= _donor_load_fraction(r)
+            dropped.add(id(r))
+
+    return [r for r in recs if id(r) not in dropped]
+
+
 def recommend_all(state: str | None = None) -> list[dict]:
     out = []
     for med in store.MEDICINES:
         out.extend(recommend_for_medicine(med["name"]))
+    out = _apply_cross_medicine_donor_cap(out)
     if state:
         out = [r for r in out if r["from_state"] == state or r["to_state"] == state]
     out.sort(key=lambda r: (r["urgency"] != "critical", -r["quantity"]))

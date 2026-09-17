@@ -10,7 +10,8 @@ def load_transfers() -> list[dict]:
 
 
 def create_and_execute_transfer(
-    from_phc_id: str, to_phc_id: str, medicine: str, quantity: float
+    from_phc_id: str, to_phc_id: str, medicine: str, quantity: float,
+    requested_by: str | None = None,
 ) -> dict:
     """Execute a stock redistribution transfer by modifying store levels and logging the manifest."""
     from_phc = store.PHC_BY_ID.get(from_phc_id)
@@ -51,6 +52,7 @@ def create_and_execute_transfer(
         "quantity": quantity,
         "status": "Completed",
         "created_at": datetime.now().isoformat(),
+        "requested_by": requested_by,
     }
 
     # Persist the manifest to the SQLite ledger (also writes an audit-log row)

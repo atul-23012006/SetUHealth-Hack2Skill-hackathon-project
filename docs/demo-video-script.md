@@ -66,10 +66,14 @@ ask, in their own language, by voice."
 Navigate to the Federated Network page. Toggle **🚫 Show Raw Data (blocked)** —
 "raw patient and facility records physically cannot cross a node boundary;
 watch the links break." Toggle back. "Only aggregated model weights flow —
-state → national, and the identical mechanism national → BRICS. India, Brazil,
-South Africa build a shared predictive model without a data-sharing treaty for
-raw records. That's SetuHealth — real-time, predictive, explainable,
-auditable, and built to scale from one district to a federation of nations."
+state → national, and the identical mechanism national → BRICS. India here
+is our real generated PHC network; Brazil, South Africa, Indonesia and Egypt
+are marked **Simulated** on screen — this is a proof-of-concept for the
+federated architecture, not a live international integration, and that's
+worth saying out loud on camera rather than letting the animation imply
+otherwise. Real partner onboarding is next. That's SetuHealth — real-time,
+predictive, explainable, auditable, and built to scale from one district to
+a federation of nations."
 
 ---
 

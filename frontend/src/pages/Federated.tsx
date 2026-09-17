@@ -20,6 +20,22 @@ const AGGREGATED_SHARED = [
   { label: "Encrypted aggregated stats", icon: "🔐" },
 ];
 
+// India is real seeded/generated PHC data. The BRICS partner nations are not
+// — there is no live onboarding to Brazil/South Africa/Indonesia/Egypt health
+// systems, so their summaries are deterministically-seeded synthetic stand-ins
+// for what a real partner node's federated summary would look like. This
+// badge exists so the demo never reads as claiming live international data.
+function SimulatedDataBadge({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-amber-400/15 border-amber-400/40 text-amber-300 ${className}`}
+      title="Synthetic seeded data — not a live connection to this nation's health system"
+    >
+      🧪 Simulated
+    </span>
+  );
+}
+
 export default function Federated() {
   const { t } = useLang();
   const [national, setNational] = useState<NationalFederatedPrior | null>(null);
@@ -190,16 +206,19 @@ export default function Federated() {
             <circle cx="80" cy="240" r="22" fill="#16a34a" className="node-pulse" style={{ transformOrigin: "80px 240px" }} />
             <text x="80" y="237" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">BRAZIL</text>
             <text x="80" y="248" fill="#bbf7d0" fontSize="7" textAnchor="middle">partner</text>
+            <text x="80" y="270" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">🧪 SIMULATED</text>
 
             {/* South Africa Node */}
             <circle cx="360" cy="80" r="22" fill="#eab308" className="node-pulse" style={{ transformOrigin: "360px 80px" }} />
             <text x="360" y="77" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">S.AFRICA</text>
             <text x="360" y="88" fill="#fef08a" fontSize="7" textAnchor="middle">partner</text>
+            <text x="360" y="110" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">🧪 SIMULATED</text>
 
             {/* Egypt/Partner Node */}
             <circle cx="360" cy="240" r="22" fill="#64748b" className="node-pulse" style={{ transformOrigin: "360px 240px" }} />
             <text x="360" y="237" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">EGYPT</text>
             <text x="360" y="248" fill="#cbd5e1" fontSize="7" textAnchor="middle">partner</text>
+            <text x="360" y="270" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">🧪 SIMULATED</text>
 
             {/* Blocked X overlay in raw mode */}
             {isRawMode && (
@@ -296,8 +315,20 @@ export default function Federated() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <div className="text-sm font-semibold text-slate-700 mb-1">{t("bricsPrior")}</div>
-        <div className="text-xs text-slate-400 mb-3">{brics.nodes.map((n) => n.node).join(" · ")}</div>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="text-sm font-semibold text-slate-700">{t("bricsPrior")}</div>
+        </div>
+        <div className="text-xs text-slate-400 mb-2">{brics.nodes.map((n) => n.node).join(" · ")}</div>
+        <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+          <span>🧪</span>
+          <span>
+            <strong>India</strong> reflects this platform's live generated PHC network. The BRICS partner
+            nodes (Brazil, South Africa, Indonesia, Egypt) are a <strong>proof-of-concept</strong> for the
+            federated architecture — their summaries are deterministically-seeded synthetic stand-ins,
+            not a live connection to those countries' health systems. Real partner onboarding is future
+            work, not implemented here.
+          </span>
+        </div>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={bricsChart}>
             <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" />
@@ -321,7 +352,14 @@ export default function Federated() {
             <tbody className="divide-y divide-slate-100">
               {brics.nodes.map((n) => (
                 <tr key={n.node}>
-                  <td className="px-2 py-1 font-medium text-slate-800">{n.node}</td>
+                  <td className="px-2 py-1 font-medium text-slate-800">
+                    <span className="flex items-center gap-1.5">
+                      {n.node}
+                      {n.node !== "India" && (
+                        <SimulatedDataBadge className="bg-amber-50! border-amber-200! text-amber-700!" />
+                      )}
+                    </span>
+                  </td>
                   <td className="px-2 py-1 text-slate-600">{n.facility_count.toLocaleString()}</td>
                   <td className="px-2 py-1 text-rose-600 font-semibold">{n.critical_alerts}</td>
                   <td className="px-2 py-1 text-amber-600 font-semibold">{n.warning_alerts}</td>

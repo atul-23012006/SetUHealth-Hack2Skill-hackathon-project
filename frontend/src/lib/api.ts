@@ -12,11 +12,34 @@ import type {
   ConsumptionAnomaly,
   CapacityRecommendations,
   AuditEvent,
+  ActingUser,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const ACTING_USER_KEY = "setuhealth_acting_user_id";
 
 const client = axios.create({ baseURL: BASE_URL });
+
+// Every request carries whichever demo identity the operator picked in the
+// header's "acting as" switcher (see lib/AuthContext.tsx), so the backend's
+// transfer-authorization check has someone to check against. Read fresh from
+// localStorage on every request rather than once at module load, since the
+// user can switch identity mid-session without a page reload.
+client.interceptors.request.use((config) => {
+  try {
+    const userId = localStorage.getItem(ACTING_USER_KEY);
+    if (userId) {
+      // config.headers is an AxiosHeaders instance here, not a plain object —
+      // a bracket/property assignment silently sets a JS property that axios's
+      // own header serialization never reads, so the header never actually
+      // reaches the network. .set() is the API that's guaranteed to work.
+      config.headers.set("X-User-Id", userId);
+    }
+  } catch {
+    // localStorage unavailable (private browsing, disabled storage) — proceed unauthenticated
+  }
+  return config;
+});
 
 export const api = {
   states: () => client.get<Record<string, string[]>>("/api/states").then((r) => r.data),
@@ -65,6 +88,22 @@ export const api = {
       localStorage.setItem("offline_transfers", JSON.stringify(offlineQueue));
       // Dispatch storage event locally so list updates in active window
       window.dispatchEvent(new Event("storage"));
+      // Best-effort fire-and-forget trace: if the browser closes and never
+      // reopens, storage is cleared, or the user switches devices before the
+      // "online" event fires to actually sync this, the local queue entry is
+      // gone with zero server-side trace. sendBeacon can't retry or carry
+      // headers, but it gives the server a breadcrumb even in that case —
+      // it does NOT apply the transfer.
+      try {
+        const beaconUrl = `${BASE_URL}/api/transfers/pending`;
+        const payload = new Blob(
+          [JSON.stringify({ from_phc_id, to_phc_id, medicine, quantity })],
+          { type: "application/json" }
+        );
+        navigator.sendBeacon?.(beaconUrl, payload);
+      } catch {
+        // best-effort only — never block the offline queue on this
+      }
       return Promise.resolve(mockManifest);
     }
     return client
@@ -103,8 +142,11 @@ export const api = {
     client
       .get<ConsumptionAnomaly>(`/api/anomalies/${phcId}/explain`, { params: { lang } })
       .then((r) => r.data),
+  anomalyNetworkStatus: () =>
+    client.get<{ available: boolean; systemic_shift: boolean; drift_z?: number }>("/api/anomalies/network-status").then((r) => r.data),
   auditLog: (limit = 100) =>
     client.get<AuditEvent[]>("/api/audit", { params: { limit } }).then((r) => r.data),
+  listUsers: () => client.get<ActingUser[]>("/api/auth/users").then((r) => r.data),
   downloadFhir: (transferId: string) =>
     client.get<object>(`/api/fhir/transfer/${transferId}`).then((r) => {
       const blob = new Blob([JSON.stringify(r.data, null, 2)], { type: "application/fhir+json" });

@@ -117,6 +117,7 @@ export interface Transfer {
   quantity: number;
   status: string;
   created_at: string;
+  requested_by?: string | null;
 }
 
 export interface ActiveCrisis {
@@ -196,6 +197,14 @@ export interface AuditEvent {
   ts: string;
   kind: string;
   summary: string;
+}
+
+export interface ActingUser {
+  user_id: string;
+  label: string;
+  role: string;
+  authorized_phc_ids: string[];
+  authorized_states: string[];
 }
 
 export type Lang = "en" | "hi" | "mr" | "ta";

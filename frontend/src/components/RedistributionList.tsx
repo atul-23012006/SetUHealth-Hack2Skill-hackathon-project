@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 import type { RedistributionRec, Medicine } from "../lib/types";
 import { useLang } from "../lib/LangContext";
 import { api } from "../lib/api";
@@ -32,7 +33,8 @@ export default function RedistributionList({ recs, medicines, onTransferExecuted
       }
     } catch (err) {
       console.error(err);
-      alert("Redistribution transfer failed. Please try again.");
+      const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null;
+      alert(detail ? `Transfer failed: ${detail}` : "Redistribution transfer failed. Please try again.");
     } finally {
       setExecutingIndex(null);
     }

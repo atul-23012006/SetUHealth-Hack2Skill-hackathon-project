@@ -125,13 +125,22 @@ active.*
 - **State node → national server**: each state computes local statistics
   (depletion rates per medicine category, risk counts) and only that
   summary is federated-averaged into a national model — no raw PHC or
-  patient record ever leaves the state's own system.
+  patient record ever leaves the state's own system. **This layer runs on
+  our real generated India PHC network.**
 - **National → BRICS**: the identical mechanism combines India's national
   prior with partner-nation summaries into a shared global prior — enabling
   joint predictive modelling across BRICS without a data-sharing treaty for
-  raw records, only for aggregates.
+  raw records, only for aggregates. **The BRICS partner nodes (Brazil, South
+  Africa, Indonesia, Egypt) are a proof-of-concept for this architecture,
+  not a live integration — their summaries are deterministically-seeded
+  synthetic data standing in for what a real partner node's federated
+  summary would look like, since we don't have access to their facility-level
+  data. Real partner onboarding is named explicitly as future work (see
+  slide 12), not claimed as done.**
 - This is the answer to "how do you share predictive modelling across
-  nations without a privacy/sovereignty problem."
+  nations without a privacy/sovereignty problem" — demonstrated end-to-end
+  for the India layer, and architected (with simulated partners) to show
+  exactly how it extends.
 
 *Screenshot: Federated Network page.*
 
@@ -174,6 +183,10 @@ active.*
 ## 12. What's Next
 - Integrate with existing state HMIS/e-Aushadhi systems as the real data
   source, replacing the synthetic generator.
+- **Onboard real BRICS partner nodes**: the Federated Network page today
+  demos the architecture with simulated Brazil/South Africa/Indonesia/Egypt
+  summaries; production requires each partner standing up its own local
+  aggregation node against real facility data.
 - Differential-privacy hardening on the federated aggregation layer for
   production BRICS deployment.
 - Add computer-vision-based stock counting from PHC storeroom photos for

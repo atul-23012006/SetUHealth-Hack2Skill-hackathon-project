@@ -82,6 +82,7 @@ export default function Transfers() {
                   <th className="px-6 py-3">Donor Facility</th>
                   <th className="px-6 py-3">Recipient Facility</th>
                   <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Requested By</th>
                   <th className="px-6 py-3">Date / Time</th>
                   <th className="px-6 py-3">Export</th>
                 </tr>
@@ -110,6 +111,9 @@ export default function Transfers() {
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
                         {tr.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500">
+                      {tr.requested_by || "—"}
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {new Date(tr.created_at).toLocaleString()}

@@ -68,6 +68,14 @@ const en: Dict = {
   lendStaff: "lend",
   overConsumption: "Over-consumption",
   underReporting: "Under-reporting",
+  actingAsNone: "— Not signed in —",
+  actingAsHint: "Acting as (used to authorize transfers)",
+  offlineTransferSingular: "transfer",
+  offlineTransferPlural: "transfers",
+  offlineTransferWarning: "queued offline and not yet synced to the server — do not clear browser data or switch devices until they sync.",
+  requestedBy: "Requested by",
+  transferDeniedTitle: "Transfer denied",
+  selectActingUser: "Select who you're acting as (top-right) before executing a transfer.",
 };
 
 const hi: Dict = {

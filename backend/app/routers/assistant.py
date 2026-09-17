@@ -1,7 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from app.services import forecasting, redistribution, genai
+from app.services import auth, db, forecasting, redistribution, genai
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
@@ -51,25 +51,41 @@ def _build_context(state: str | None) -> str:
     return "\n".join(lines)
 
 
-def execute_action(action: dict) -> str:
+def execute_action(action: dict, user: dict | None = None) -> str:
     from app.services import store, transfers
-    
+
     act_type = action.get("action")
     if act_type == "reset":
         store.reset_store_data()
         return "🔄 [SYSTEM ACTION] Database and simulation metrics have been successfully reset to baseline."
-        
+
     elif act_type == "transfer":
         from_id = action.get("from_phc_id")
         to_id = action.get("to_phc_id")
         med = action.get("medicine")
         qty = action.get("quantity")
         try:
-            manifest = transfers.create_and_execute_transfer(from_id, to_id, med, qty)
+            # Same authorization gate as the manual transfer form
+            # (routers/transfers.py) — the assistant is a second front door
+            # onto the exact same create_and_execute_transfer call, so it
+            # gets the exact same check, not a weaker one.
+            auth.authorize_transfer(user, from_id)
+            manifest = transfers.create_and_execute_transfer(
+                from_id, to_id, med, qty,
+                requested_by=user["user_id"] if user else None,
+            )
             return f"✅ [SYSTEM ACTION] Transfer request {manifest['id']} executed: moved {qty} {manifest['unit']} of {med} from {manifest['from_phc_name']} to {manifest['to_phc_name']}."
+        except auth.TransferNotAuthorized as e:
+            db.log_event(
+                "transfer_rejected",
+                f"assistant denied: {e}",
+                {"from_phc_id": from_id, "to_phc_id": to_id, "medicine": med, "quantity": qty,
+                 "user_id": user["user_id"] if user else None},
+            )
+            return f"🚫 [SYSTEM ACTION] Transfer denied: {e}."
         except Exception as e:
             return f"❌ [SYSTEM ACTION] Transfer failed: {str(e)}."
-            
+
     elif act_type == "crisis":
         t_type = action.get("target_type")
         t_name = action.get("target_name")
@@ -84,12 +100,12 @@ def execute_action(action: dict) -> str:
 
 
 @router.post("/chat")
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, user: dict | None = Depends(auth.get_current_user_optional)):
     # Parse and execute action if present
     action = genai.parse_chat_action(req.query)
     feedback = ""
     if action and action.get("action") != "none":
-        feedback = execute_action(action)
+        feedback = execute_action(action, user)
 
     context = _build_context(req.state)
     reply = genai.chat_reply(req.query, context, req.lang)

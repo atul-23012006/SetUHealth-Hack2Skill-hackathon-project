@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useLang } from "../lib/LangContext";
 import { useAuth } from "../lib/AuthContext";
 import { LANGUAGES } from "../lib/i18n";
 import InstallPrompt from "./InstallPrompt";
+import GuidedTour from "./GuidedTour";
 
 function readOfflineQueueLength(): number {
   try {
@@ -20,6 +21,19 @@ export default function Layout() {
   const { lang, setLang, t } = useLang();
   const { users, userId, setUserId } = useAuth();
   const [offlineCount, setOfflineCount] = useState(readOfflineQueueLength);
+  const [tourRunning, setTourRunning] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const startTour = () => {
+    if (location.pathname !== "/") {
+      navigate("/");
+      // Give the Dashboard a moment to mount before Joyride queries its targets.
+      setTimeout(() => setTourRunning(true), 250);
+    } else {
+      setTourRunning(true);
+    }
+  };
 
   useEffect(() => {
     // api.ts dispatches a synthetic "storage" event locally whenever the
@@ -37,6 +51,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <GuidedTour run={tourRunning} onFinish={() => setTourRunning(false)} />
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -63,6 +78,14 @@ export default function Layout() {
             </NavLink>
           </nav>
           <div className="flex items-center gap-2">
+            <button
+              onClick={startTour}
+              title="Take the tour"
+              className="flex items-center gap-1 border border-slate-300 rounded-md text-sm px-2 py-1.5 text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <span aria-hidden="true">🧭</span>
+              <span className="hidden sm:inline">Take the tour</span>
+            </button>
             <select
               value={userId ?? ""}
               onChange={(e) => setUserId(e.target.value || null)}

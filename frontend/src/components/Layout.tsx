@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useLang } from "../lib/LangContext";
 import { useAuth } from "../lib/AuthContext";
 import { LANGUAGES } from "../lib/i18n";
+import InstallPrompt from "./InstallPrompt";
 
 function readOfflineQueueLength(): number {
   try {
@@ -94,6 +95,7 @@ export default function Layout() {
             {t("offlineTransferWarning")}
           </div>
         )}
+        <InstallPrompt />
       </header>
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
         <Outlet />

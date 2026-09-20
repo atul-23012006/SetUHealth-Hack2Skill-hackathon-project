@@ -12,14 +12,21 @@ is wrong:
   barely moves. Usually a data-entry breakdown (registers not digitised),
   sometimes diversion masked by fake bookkeeping.
 
-Method: for each PHC we take the trailing ``WINDOW`` days and compute a
-consumption index (how the window's dispensing rate compares to that
-facility's own pre-window baseline, averaged across medicines) and a footfall
-index (same idea for patient visits). Their ratio is the tell. We take the
-log-ratio across the whole network, and flag facilities more than
-``Z_FLAG`` robust standard deviations (median / MAD) from the network median.
+Method: for each facility we take the trailing ``WINDOW`` days and compute a
+consumption index (how the window's drawdown rate compares to that facility's
+own pre-window baseline, averaged across the resources it stocks) and a
+throughput index (same idea for patient visits). Their ratio is the tell. We
+take the log-ratio across the network, and flag facilities more than
+``Z_FLAG`` robust standard deviations (median / MAD) from the median.
 The detector never looks at the ground-truth labels in the generator — it
 rediscovers the seeded anomalies purely from this distribution.
+
+Nothing here is medicine-specific: it reads whatever resources a facility
+stocks out of ``store.STOCK_HISTORY``, so a blood bank's O-negative drawdown
+is scored by exactly the same code as a PHC's paracetamol. The one concession
+to heterogeneity is that the median/MAD baseline is computed *per facility
+type* (see ``detect_all``) — comparing a blood bank to a PHC would corrupt
+the baseline for both.
 
 **Known blind spot and how it's mitigated here:** a network-median/MAD
 z-score is computed fresh on every call, against whatever facilities are in
@@ -223,11 +230,35 @@ def detect_all(state: str | None = None) -> list[dict]:
     if len(scored) < 5:
         return []
 
-    log_ratios = [s["log_ratio"] for s in scored]
-    median = statistics.median(log_ratios)
-    mad = statistics.median([abs(x - median) for x in log_ratios]) or _EPS
-    robust_sd = 1.4826 * mad
-    _record_network_median(median)
+    # Each facility is scored against the baseline of its own *facility type*.
+    # A blood bank's blood drawdown against donor throughput is simply not the
+    # same population as a PHC's medicine consumption against OPD footfall, and
+    # pooling them corrupts the median/MAD for both. Note this is not the
+    # per-state scoping rejected above: a facility's peer group here is fixed
+    # by what the facility *is*, not by what the caller happened to query, so
+    # the same facility always scores against the same population.
+    cohorts: dict[str, list[dict]] = {}
+    for s in scored:
+        ftype = store.PHC_BY_ID[s["phc_id"]].get("facility_type", "PHC")
+        cohorts.setdefault(ftype, []).append(s)
+
+    baselines = {}
+    for ftype, members in cohorts.items():
+        if len(members) < 5:
+            continue  # too few peers to judge an outlier against
+        log_ratios = [m["log_ratio"] for m in members]
+        median = statistics.median(log_ratios)
+        mad = statistics.median([abs(x - median) for x in log_ratios]) or _EPS
+        baselines[ftype] = (median, 1.4826 * mad)
+
+    if not baselines:
+        return []
+
+    # Drift tracking follows the dominant facility population — the one whose
+    # movement actually constitutes a network-wide event.
+    dominant = max(cohorts, key=lambda f: len(cohorts[f]))
+    if dominant in baselines:
+        _record_network_median(baselines[dominant][0])
 
     anomalies = []
     for s in scored:
@@ -235,6 +266,10 @@ def detect_all(state: str | None = None) -> list[dict]:
         if state and phc["state"] != state:
             continue
 
+        baseline = baselines.get(phc.get("facility_type", "PHC"))
+        if baseline is None:
+            continue
+        median, robust_sd = baseline
         z = (s["log_ratio"] - median) / robust_sd
         self_history = _self_history_log_ratios(s["phc_id"])
         self_z = _self_z_score(s["log_ratio"], self_history)

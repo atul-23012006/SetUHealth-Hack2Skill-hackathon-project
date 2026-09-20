@@ -7,7 +7,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.config import settings
 from app.routers import (
     phc, forecast, alerts, redistribution, federated, assistant, crisis,
-    transfers, fhir, anomalies, audit, auth, public,
+    transfers, fhir, anomalies, audit, auth, public, export,
 )
 
 app = FastAPI(title="SetuHealth API", description="Federated national PHC resource management platform")
@@ -40,6 +40,7 @@ app.include_router(anomalies.router)
 app.include_router(audit.router)
 app.include_router(auth.router)
 app.include_router(public.router)
+app.include_router(export.router)
 
 
 @app.get("/api/health")

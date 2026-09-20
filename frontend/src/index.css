@@ -1,11 +1,43 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+
+  /* Brand — the teal already used ad-hoc everywhere (Federated.tsx,
+     PublicPortal.tsx, Layout.tsx's active nav tab, etc.), formalized into
+     one fixed scale instead of one-off `teal-*` utility picks. Values are
+     Tailwind's own teal palette — a value-preserving rename, not a recolor. */
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+  --color-brand-950: #042f2e;
+
+  /* Text tokens for marketing surfaces — the Officer Console keeps slate-*
+     directly (that neutral chrome is the intended "serious tool" feel). */
+  --color-ink-900: #0f172a;
+  --color-ink-600: #475569;
+
+  /* Marketing-surface background (PublicPortal only) vs. the Officer
+     Console's existing cool gray, kept unchanged below. */
+  --color-surface-warm: #f7f3ea;
+  --color-surface-cool: #f4f6f8;
+}
+
 :root {
   color-scheme: light;
 }
 
 body {
-  background-color: #f4f6f8;
+  background-color: var(--color-surface-cool);
+  font-family: var(--font-sans);
 }
 
 ::-webkit-scrollbar {

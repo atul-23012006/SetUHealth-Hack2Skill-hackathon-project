@@ -15,6 +15,16 @@ FORECAST_HORIZON = 14
 CRITICAL_DAYS = 7
 WARNING_DAYS = 14
 MIN_OBSERVATIONS = 14  # Minimum history length required to fit Holt's smoothing model
+# Holt's smoothing is fit on at most this many trailing days, regardless of
+# how much history a facility has. A 14-day-ahead forecast should weight
+# recent behaviour anyway, and without this cap, fit cost (and therefore
+# /api/forecast's latency) grows with total history length — extending
+# generate_data.py's DAYS from 90 to 365 by default took forecast_all() from
+# ~6.3s to ~21.5s across the full network before this cap was added. Set to
+# 90 (the old fixed history length) specifically so that a full year of
+# stock history now costs the same to forecast as 90 days always did —
+# confirmed at ~6.7s, matching the pre-Phase-7 baseline.
+FIT_WINDOW_DAYS = 90
 
 # Global in-memory cache to resolve CPU-bound model-fitting bottlenecks
 _FORECAST_CACHE = {}
@@ -73,10 +83,12 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
     # Note: Upward inventory movements represent restocking events, not negative consumption.
     # Decreases due to transfers or other stock adjustments are treated as consumption in this model.
     # Filter out days when stock was already depleted to avoid unobserved demand bias.
+    # Bounded to the trailing FIT_WINDOW_DAYS — see its definition for why.
+    fit_levels = levels[-FIT_WINDOW_DAYS:]
     consumption = []
-    for i in range(1, len(levels)):
-        if levels[i - 1] > 0.05:
-            diff = levels[i - 1] - levels[i]
+    for i in range(1, len(fit_levels)):
+        if fit_levels[i - 1] > 0.05:
+            diff = fit_levels[i - 1] - fit_levels[i]
             consumption.append(max(0.0, diff))
 
     forecasted_demand = None
@@ -115,12 +127,10 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
 
     # 3. Fallback Heuristic (Moving average)
     if forecasted_demand is None:
-        # Calculate trailing 14-day average consumption from non-depleted days
-        active_consumption = []
-        for i in range(1, len(levels)):
-            if levels[i - 1] > 0.05:
-                active_consumption.append(max(0.0, levels[i - 1] - levels[i]))
-        fallback_rate = float(np.mean(active_consumption[-TREND_WINDOW:])) if active_consumption else 0.0
+        # Calculate trailing 14-day average consumption from non-depleted days.
+        # `consumption` already ends at the same trailing days full `levels`
+        # would, so its tail is reused rather than rescanning the full history.
+        fallback_rate = float(np.mean(consumption[-TREND_WINDOW:])) if consumption else 0.0
         forecasted_demand = np.array([fallback_rate] * FORECAST_HORIZON)
         # Fallback interval: ±15% of the point estimate
         forecast_rmse = fallback_rate * 0.15

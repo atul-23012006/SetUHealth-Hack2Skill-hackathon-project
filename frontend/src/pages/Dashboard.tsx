@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  WifiOff, Play, Square, AlertTriangle, FlaskConical, Waves, Bug, Microscope,
+  Snowflake, Loader2, RotateCcw, Globe, Brain, Search, Building2, ExternalLink,
+} from "lucide-react";
 import { api } from "../lib/api";
 import { useLang } from "../lib/LangContext";
 import type {
@@ -15,6 +19,18 @@ import AnomalyList from "../components/AnomalyList";
 import CapacityRedistributionList from "../components/CapacityRedistributionList";
 
 const riskRank: Record<Risk, number> = { critical: 2, warning: 1, low: 0 };
+
+const CRISIS_TYPE_ICONS: Record<string, typeof Waves> = {
+  "Monsoon Floods": Waves,
+  "Dengue Outbreak": Bug,
+  "Malaria Outbreak": Microscope,
+  "Cold Chain Failure": Snowflake,
+};
+
+function CrisisTypeIcon({ type, size, className }: { type: string; size: number; className?: string }) {
+  const Icon = CRISIS_TYPE_ICONS[type] ?? AlertTriangle;
+  return <Icon size={size} className={className} />;
+}
 
 const DEMO_STEPS = [
   { label: "1/5 — Resetting simulation to baseline..." },
@@ -317,9 +333,9 @@ export default function Dashboard() {
                 key={i}
                 className={`h-2 w-2 rounded-full transition-all duration-300 ${
                   i === demoStepIdx
-                    ? "bg-teal-400 scale-125"
+                    ? "bg-brand-400 scale-125"
                     : i < demoStepIdx
-                    ? "bg-teal-600"
+                    ? "bg-brand-600"
                     : "bg-slate-600"
                 }`}
               />
@@ -339,7 +355,7 @@ export default function Dashboard() {
       {!isOnline && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl flex items-center justify-between shadow-sm animate-pulse">
           <div className="flex items-center gap-2 text-sm font-semibold text-amber-800">
-            <span>📶</span>
+            <WifiOff size={16} />
             <span>Offline Mode: Changes will queue locally and synchronize once network returns.</span>
           </div>
           <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-medium border border-amber-300">
@@ -365,7 +381,8 @@ export default function Dashboard() {
               : "bg-slate-900 border-slate-800 text-white hover:bg-slate-700 shadow-slate-900/30"
           }`}
         >
-          {demoRunning ? "⏹ Stop Demo" : "🎬 Run Demo"}
+          {demoRunning ? <Square size={14} /> : <Play size={14} />}
+          {demoRunning ? "Stop Demo" : "Run Demo"}
         </button>
       </div>
 
@@ -373,8 +390,8 @@ export default function Dashboard() {
       {topAlerts.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-rose-500 uppercase tracking-widest">
-              🚨 Critical Stockout Countdowns
+            <span className="flex items-center gap-1 text-[11px] font-bold text-rose-500 uppercase tracking-widest">
+              <AlertTriangle size={12} /> Critical Stockout Countdowns
             </span>
             <span className="text-[10px] text-slate-400">— live ETA until medicine runs out</span>
           </div>
@@ -397,7 +414,7 @@ export default function Dashboard() {
       {activeCrises.length > 0 && (
         <div className="bg-rose-600 text-white rounded-xl px-5 py-4 shadow-lg border border-rose-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className="text-2xl animate-pulse">🚨</span>
+            <AlertTriangle size={28} className="animate-pulse shrink-0" />
             <div>
               <div className="font-bold text-base">Active Crisis Simulation</div>
               <div className="text-sm text-rose-100 mt-0.5">
@@ -418,9 +435,9 @@ export default function Dashboard() {
           <button
             onClick={handleReset}
             disabled={actionLoading}
-            className="shrink-0 bg-white text-rose-700 font-bold text-sm px-4 py-2 rounded-lg hover:bg-rose-50 disabled:opacity-50 transition-colors"
+            className="shrink-0 bg-white text-rose-700 font-bold text-sm px-4 py-2 rounded-lg hover:bg-rose-50 disabled:opacity-50 transition-colors flex items-center gap-1.5"
           >
-            {actionLoading ? "Resetting..." : "↺ Reset Simulation"}
+            {actionLoading ? "Resetting..." : (<><RotateCcw size={14} /> Reset Simulation</>)}
           </button>
         </div>
       )}
@@ -431,7 +448,7 @@ export default function Dashboard() {
       }`}>
         <div className="space-y-1">
           <div className="font-semibold text-slate-800 flex items-center gap-1.5">
-            <span>🧪 {t("crisisSimulator")}</span>
+            <FlaskConical size={16} /> {t("crisisSimulator")}
           </div>
           <div className="text-xs text-slate-500">
             Inject a health emergency to see forecasts flip critical, stockouts accelerate, and redistribution recompute live.
@@ -470,16 +487,19 @@ export default function Dashboard() {
             </select>
           )}
 
-          <select
-            value={crisisType}
-            onChange={(e) => setCrisisType(e.target.value)}
-            className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium text-rose-700"
-          >
-            <option value="Monsoon Floods">🌊 Monsoon Floods</option>
-            <option value="Dengue Outbreak">🦟 Dengue Outbreak</option>
-            <option value="Malaria Outbreak">🦠 Malaria Outbreak</option>
-            <option value="Cold Chain Failure">🧊 Cold Chain Failure</option>
-          </select>
+          <div className="flex items-center gap-1.5 border border-slate-300 rounded-md bg-white pl-2">
+            <CrisisTypeIcon type={crisisType} size={14} className="text-rose-600 shrink-0" />
+            <select
+              value={crisisType}
+              onChange={(e) => setCrisisType(e.target.value)}
+              className="text-xs py-1.5 pr-2 bg-transparent font-medium text-rose-700 border-none focus:outline-none"
+            >
+              <option value="Monsoon Floods">Monsoon Floods</option>
+              <option value="Dengue Outbreak">Dengue Outbreak</option>
+              <option value="Malaria Outbreak">Malaria Outbreak</option>
+              <option value="Cold Chain Failure">Cold Chain Failure</option>
+            </select>
+          </div>
 
           <button
             id="trigger-crisis-btn"
@@ -487,7 +507,7 @@ export default function Dashboard() {
             disabled={actionLoading}
             className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer disabled:opacity-50 shadow-sm transition-all flex items-center gap-1.5"
           >
-            {actionLoading ? "⏳ Triggering..." : "🚨 Simulate Outbreak"}
+            {actionLoading ? (<><Loader2 size={14} className="animate-spin" /> Triggering...</>) : (<><AlertTriangle size={14} /> Simulate Outbreak</>)}
           </button>
 
           {activeCrises.length > 0 && (
@@ -512,11 +532,11 @@ export default function Dashboard() {
       </div>
 
       {/* SDG 3.8 Impact Dashboard */}
-      <div className="bg-gradient-to-r from-teal-950 via-slate-900 to-slate-950 border border-teal-800/50 rounded-xl p-5 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 border border-brand-800/50 rounded-xl p-5 text-white shadow-lg">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="font-bold text-teal-300 text-base flex items-center gap-2">
-              🌍 SDG 3.8 Impact Dashboard
+            <div className="font-bold text-brand-300 text-base flex items-center gap-2">
+              <Globe size={18} /> SDG 3.8 Impact Dashboard
             </div>
             <div className="text-xs text-slate-400 mt-0.5">
               Universal Health Coverage — Live impact estimates based on current network state
@@ -526,9 +546,9 @@ export default function Dashboard() {
             href="https://sdgs.un.org/goals/goal3"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-teal-400 hover:text-teal-300 border border-teal-800 px-2 py-1 rounded-lg transition-colors"
+            className="text-[10px] text-brand-400 hover:text-brand-300 border border-brand-800 px-2 py-1 rounded-lg transition-colors inline-flex items-center gap-1"
           >
-            UN SDG Goal 3 ↗
+            UN SDG Goal 3 <ExternalLink size={10} />
           </a>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -548,11 +568,11 @@ export default function Dashboard() {
           </div>
           <div className="bg-white/5 rounded-xl p-3 border border-white/5">
             <div className="flex items-baseline gap-1 mb-2">
-              <div className="text-2xl font-black text-teal-300">{sdgMetrics.coverageScore}%</div>
+              <div className="text-2xl font-black text-brand-300">{sdgMetrics.coverageScore}%</div>
             </div>
             <div className="w-full bg-white/10 rounded-full h-1.5">
               <div
-                className="bg-gradient-to-r from-teal-400 to-emerald-400 h-1.5 rounded-full transition-all duration-700"
+                className="bg-gradient-to-r from-brand-400 to-emerald-400 h-1.5 rounded-full transition-all duration-700"
                 style={{ width: `${sdgMetrics.coverageScore}%` }}
               />
             </div>
@@ -600,8 +620,8 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <div className="flex items-center justify-between mb-1">
             <div className="text-sm font-semibold text-slate-700">{t("redistributionRecs")}</div>
-            <div className="text-[10px] text-slate-400 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded font-medium text-violet-600">
-              🧠 AI explanations available
+            <div className="flex items-center gap-1 text-[10px] text-slate-400 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded font-medium text-violet-600">
+              <Brain size={11} /> AI explanations available
             </div>
           </div>
           <RedistributionList recs={recs} medicines={medicines} onTransferExecuted={() => loadData(false)} />
@@ -613,7 +633,9 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <div className="flex items-center justify-between mb-1">
             <div>
-              <div className="text-sm font-semibold text-slate-700">🕵️ {t("consumptionAnomalies")}</div>
+              <div className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                <Search size={14} /> {t("consumptionAnomalies")}
+              </div>
               <div className="text-[11px] text-slate-400">{t("consumptionAnomaliesSub")}</div>
             </div>
             {anomalies.length > 0 && (
@@ -626,7 +648,9 @@ export default function Dashboard() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <div className="mb-1">
-            <div className="text-sm font-semibold text-slate-700">🏥 {t("capacityRedistribution")}</div>
+            <div className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+              <Building2 size={14} /> {t("capacityRedistribution")}
+            </div>
             <div className="text-[11px] text-slate-400">{t("capacityRedistributionSub")}</div>
           </div>
           <CapacityRedistributionList data={capacity} />

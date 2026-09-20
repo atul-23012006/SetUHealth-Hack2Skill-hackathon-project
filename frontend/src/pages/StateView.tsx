@@ -32,7 +32,7 @@ export default function StateView() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/" className="text-sm text-teal-600 hover:underline">
+        <Link to="/" className="text-sm text-brand-600 hover:underline">
           ← {t("dashboard")}
         </Link>
         <h1 className="text-2xl font-bold text-slate-900 mt-1">{state}</h1>
@@ -52,7 +52,7 @@ export default function StateView() {
             {phcs.map((p) => (
               <tr key={p.id} className="hover:bg-slate-50">
                 <td className="px-4 py-2">
-                  <Link to={`/phcs/${p.id}`} className="text-teal-700 font-medium hover:underline">
+                  <Link to={`/phcs/${p.id}`} className="text-brand-700 font-medium hover:underline">
                     {p.name}
                   </Link>
                 </td>

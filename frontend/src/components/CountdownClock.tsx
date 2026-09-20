@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AlertTriangle, AlertCircle } from "lucide-react";
 
 interface Props {
   daysToStockout: number | null;
@@ -45,11 +46,12 @@ export default function CountdownClock({ daysToStockout, medicine, phcName, dist
       }`}
     >
       <div
-        className={`text-[10px] font-bold uppercase tracking-widest ${
+        className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest ${
           isUrgent ? "text-rose-400" : "text-amber-400"
         }`}
       >
-        {isUrgent ? "🚨 Critical Stockout" : "⚠️ Stockout Alert"}
+        {isUrgent ? <AlertTriangle size={11} /> : <AlertCircle size={11} />}
+        {isUrgent ? "Critical Stockout" : "Stockout Alert"}
       </div>
       <div className="text-white font-bold text-sm truncate">{medicine}</div>
       <div

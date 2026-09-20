@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { Truck, FileText, RefreshCw, Receipt } from "lucide-react";
 import { api } from "../lib/api";
 import { useLang } from "../lib/LangContext";
 import type { Transfer, AuditEvent } from "../lib/types";
 
 const KIND_STYLE: Record<string, string> = {
-  transfer: "bg-teal-50 text-teal-700 border-teal-100",
+  transfer: "bg-brand-50 text-brand-700 border-brand-100",
   crisis: "bg-rose-50 text-rose-700 border-rose-100",
 };
 
@@ -52,20 +53,20 @@ export default function Transfers() {
           <p className="text-sm text-slate-500 mt-1">
             Tracking cross-district and cross-facility stock distributions executed across the grid.
           </p>
-          <p className="text-xs text-slate-400 mt-1">
-            🚚 Auto-dispatched badges mark routine, low-risk transfers a simulated courier handled inline
-            — no real logistics partner is integrated today.
+          <p className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+            <Truck size={12} className="shrink-0" /> Auto-dispatched badges mark routine, low-risk transfers a
+            simulated courier handled inline — no real logistics partner is integrated today.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg font-medium">
-            📋 FHIR R4 export available per transfer
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg font-medium">
+            <FileText size={13} /> FHIR R4 export available per transfer
           </div>
           <button
             onClick={fetchTransfers}
-            className="text-sm px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50 cursor-pointer"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50 cursor-pointer"
           >
-            🔄 Refresh
+            <RefreshCw size={14} /> Refresh
           </button>
         </div>
       </div>
@@ -121,7 +122,7 @@ export default function Transfers() {
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100"
                             title={`${tr.dispatch.dispatch_id} · dispatched ${new Date(tr.dispatch.dispatched_at).toLocaleString()}`}
                           >
-                            🚚 Auto-dispatched — simulated courier, ETA {tr.dispatch.eta_minutes} min (haversine distance)
+                            <Truck size={11} /> Auto-dispatched — simulated courier, ETA {tr.dispatch.eta_minutes} min (haversine distance)
                           </span>
                         )}
                       </div>
@@ -139,7 +140,7 @@ export default function Transfers() {
                         className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border font-semibold transition-all cursor-pointer bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 disabled:opacity-50"
                         title="Export as FHIR R4 SupplyRequest"
                       >
-                        {downloadingId === tr.id ? "..." : "📋 FHIR R4"}
+                        {downloadingId === tr.id ? "..." : (<><FileText size={12} /> FHIR R4</>)}
                       </button>
                     </td>
                   </tr>
@@ -154,7 +155,9 @@ export default function Transfers() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-sm font-semibold text-slate-700">🧾 {t("auditTrail")}</h2>
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              <Receipt size={14} /> {t("auditTrail")}
+            </h2>
             <p className="text-[11px] text-slate-400">
               Persisted in SQLite — survives backend restarts
             </p>

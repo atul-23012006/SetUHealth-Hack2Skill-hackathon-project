@@ -5,21 +5,21 @@ import { Link, Outlet } from "react-router-dom";
 // — this surface is read-only and needs none of the officer console's state.
 export default function PublicLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <header className="bg-gradient-to-r from-teal-950 via-slate-900 to-slate-950 text-white">
+    <div className="min-h-screen flex flex-col bg-surface-warm">
+      <header className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 text-white">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
           <Link to="/public" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-teal-500 text-white flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold">
               S
             </div>
             <div>
               <div className="font-semibold leading-tight">SetuHealth Public Network</div>
-              <div className="text-xs text-teal-300 leading-tight">Open, aggregate-only transparency portal</div>
+              <div className="text-xs text-brand-300 leading-tight">Open, aggregate-only transparency portal</div>
             </div>
           </Link>
           <Link
             to="/"
-            className="text-xs border border-teal-700 text-teal-200 hover:bg-teal-900/40 rounded-md px-3 py-1.5 transition-colors"
+            className="text-xs border border-brand-700 text-brand-200 hover:bg-brand-900/40 rounded-md px-3 py-1.5 transition-colors"
           >
             Officer Console →
           </Link>

@@ -4,6 +4,7 @@ import {
   LineChart, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine
 } from "recharts";
+import { Snowflake, AlertTriangle } from "lucide-react";
 import { api } from "../lib/api";
 import { useLang } from "../lib/LangContext";
 import type { PHCDetail as PHCDetailType, Forecast } from "../lib/types";
@@ -72,7 +73,7 @@ export default function PHCDetail() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to={`/states/${encodeURIComponent(phc.state)}`} className="text-sm text-teal-600 hover:underline">
+        <Link to={`/states/${encodeURIComponent(phc.state)}`} className="text-sm text-brand-600 hover:underline">
           ← {phc.state}
         </Link>
         <h1 className="text-2xl font-bold text-slate-900 mt-1">{phc.name}</h1>
@@ -117,7 +118,7 @@ export default function PHCDetail() {
                   ? "bg-rose-100 text-rose-800 border border-rose-300 animate-pulse"
                   : "bg-blue-50 text-blue-700 border border-blue-200"
               }`}>
-                ❄️ Cold Chain: {forecast.temperature}°C
+                <Snowflake size={12} /> Cold Chain: {forecast.temperature}°C
                 {forecast.cold_chain_alert && " (ALERT: Exceeded 8.0°C)"}
               </span>
             )}
@@ -125,7 +126,7 @@ export default function PHCDetail() {
         )}
         {forecast && forecast.surge_detected && (
           <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-900 rounded-xl p-3 flex gap-2.5 items-start shadow-sm animate-fade-in">
-            <span className="text-base mt-0.5">⚠️</span>
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
             <div className="space-y-0.5">
               <h4 className="font-semibold text-rose-800 text-xs uppercase tracking-wider">{t("demandSurge")}</h4>
               <p className="text-xs text-rose-700 leading-relaxed">

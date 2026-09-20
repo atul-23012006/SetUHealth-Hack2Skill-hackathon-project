@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Compass, TriangleAlert } from "lucide-react";
 import { useLang } from "../lib/LangContext";
 import { useAuth } from "../lib/AuthContext";
 import { LANGUAGES } from "../lib/i18n";
@@ -46,7 +47,7 @@ export default function Layout() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-      isActive ? "bg-teal-600 text-white" : "text-slate-600 hover:bg-slate-100"
+      isActive ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100"
     }`;
 
   return (
@@ -55,7 +56,7 @@ export default function Layout() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">
               S
             </div>
             <div>
@@ -78,7 +79,7 @@ export default function Layout() {
             </NavLink>
             <NavLink
               to="/public"
-              className="ml-1 px-3 py-1.5 rounded-md text-sm font-medium border border-teal-600 text-teal-700 hover:bg-teal-50 transition-colors"
+              className="ml-1 px-3 py-1.5 rounded-md text-sm font-medium border border-brand-600 text-brand-700 hover:bg-brand-50 transition-colors"
             >
               Public Portal
             </NavLink>
@@ -89,7 +90,7 @@ export default function Layout() {
               title="Take the tour"
               className="flex items-center gap-1 border border-slate-300 rounded-md text-sm px-2 py-1.5 text-slate-600 hover:bg-slate-100 transition-colors"
             >
-              <span aria-hidden="true">🧭</span>
+              <Compass size={15} aria-hidden="true" />
               <span className="hidden sm:inline">Take the tour</span>
             </button>
             <select
@@ -119,8 +120,8 @@ export default function Layout() {
           </div>
         </div>
         {offlineCount > 0 && (
-          <div className="bg-amber-50 border-t border-amber-200 text-amber-800 text-xs px-4 py-2 text-center font-medium">
-            ⚠️ {offlineCount} {offlineCount === 1 ? t("offlineTransferSingular") : t("offlineTransferPlural")}{" "}
+          <div className="flex items-center justify-center gap-1 bg-amber-50 border-t border-amber-200 text-amber-800 text-xs px-4 py-2 text-center font-medium">
+            <TriangleAlert size={12} className="shrink-0" /> {offlineCount} {offlineCount === 1 ? t("offlineTransferSingular") : t("offlineTransferPlural")}{" "}
             {t("offlineTransferWarning")}
           </div>
         )}

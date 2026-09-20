@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Mic } from "lucide-react";
 import { useLang } from "../lib/LangContext";
 import { LANGUAGES } from "../lib/i18n";
 import { api } from "../lib/api";
@@ -92,7 +93,7 @@ export default function AssistantWidget({ state }: { state?: string }) {
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
               className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
-                m.role === "user" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-800"
+                m.role === "user" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-800"
               }`}
             >
               {m.text}
@@ -117,12 +118,12 @@ export default function AssistantWidget({ state }: { state?: string }) {
             }`}
             title={t("speak")}
           >
-            {listening ? t("listening") : "🎤"}
+            {listening ? t("listening") : <Mic size={16} />}
           </button>
         )}
         <button
           onClick={() => send(input)}
-          className="px-3 py-2 rounded-md text-sm bg-teal-600 text-white hover:bg-teal-700"
+          className="px-3 py-2 rounded-md text-sm bg-brand-600 text-white hover:bg-brand-700"
         >
           {t("send")}
         </button>

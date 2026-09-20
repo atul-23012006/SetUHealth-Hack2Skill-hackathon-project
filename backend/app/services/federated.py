@@ -29,9 +29,15 @@ def state_summary(state: str) -> dict:
     phcs = [p for p in store.PHCS if p["state"] == state]
     forecasts = [f for f in forecast_all(state=state)]
     by_category = {}
+    critical_phc_ids = set()
+    warning_phc_ids = set()
     for f in forecasts:
         cat = store.STOCK_HISTORY[f["phc_id"]][f["medicine"]]["category"]
         by_category.setdefault(cat, []).append(f["daily_depletion_rate"])
+        if f["risk"] == "critical":
+            critical_phc_ids.add(f["phc_id"])
+        elif f["risk"] == "warning":
+            warning_phc_ids.add(f["phc_id"])
     category_rates = {c: round(sum(v) / len(v), 3) for c, v in by_category.items() if v}
     critical = sum(1 for f in forecasts if f["risk"] == "critical")
     warning = sum(1 for f in forecasts if f["risk"] == "warning")
@@ -41,6 +47,12 @@ def state_summary(state: str) -> dict:
         "category_depletion_rates": category_rates,
         "critical_alerts": critical,
         "warning_alerts": warning,
+        # Distinct facilities with at least one critical/warning medicine, as
+        # opposed to critical_alerts/warning_alerts above which count every
+        # at-risk (facility, medicine) pair — a PHC out of two medicines
+        # counts once here but twice there.
+        "critical_facility_count": len(critical_phc_ids),
+        "warning_facility_count": len(warning_phc_ids),
     }
 
 

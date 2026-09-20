@@ -6,24 +6,17 @@ pools. Deficit facilities are matched to surplus facilities by solving a
 transportation optimization problem that maximizes satisfied deficit while
 minimizing transport costs (distance + district/state penalties).
 """
-import math
 import pulp
 
 from app.services import store
 from app.services.forecasting import forecast_all, forecast_medicine
+from app.services.geo import haversine_km as _haversine_km
 
 SURPLUS_MARGIN_DAYS = 25  # no risk before this many days => can be a donor
 MIN_SPARE_FRACTION = 0.35  # keep at least this fraction of capacity as buffer
 MAX_DONOR_LOAD = 2.0  # a facility may donate at most this many "full medicines'
 # worth" of spare, summed as a fraction-of-spare across every medicine it's
 # recommended to donate in one pass — see _apply_cross_medicine_donor_cap
-
-
-def _haversine_km(a, b) -> float:
-    lat1, lon1, lat2, lon2 = map(math.radians, [a["lat"], a["lon"], b["lat"], b["lon"]])
-    dlat, dlon = lat2 - lat1, lon2 - lon1
-    h = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-    return 2 * 6371 * math.asin(math.sqrt(h))
 
 
 def recommend_for_medicine(medicine: str) -> list[dict]:

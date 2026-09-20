@@ -94,12 +94,16 @@ export interface NationalFederatedPrior {
   total_facilities: number;
   category_depletion_prior: Record<string, number>;
   node_summaries: StateNodeSummary[];
+  contributing_nodes_count: number;
+  model_confidence_score: number;
 }
 
 export interface BricsSharedPrior {
   nodes: StateNodeSummary[];
   global_category_depletion_prior: Record<string, number>;
   note: string;
+  contributing_nodes_count: number;
+  model_confidence_score: number;
 }
 
 export interface Transfer {

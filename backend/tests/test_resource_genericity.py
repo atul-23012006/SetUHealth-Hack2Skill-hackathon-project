@@ -15,6 +15,8 @@ import pytest
 from app.data import resource_types
 from app.services import anomaly, forecasting, redistribution, store
 
+# synthetic_facility fixture lives in conftest.py (shared across test files).
+
 
 def _declining_series(start: float, daily_use: float, days: int = 90) -> list[float]:
     """A plainly-declining stock curve with a mild weekly wobble — enough
@@ -24,46 +26,6 @@ def _declining_series(start: float, daily_use: float, days: int = 90) -> list[fl
         level = max(0.0, level - daily_use * (1.0 + 0.1 * math.sin(d / 7)))
         levels.append(round(level, 1))
     return levels
-
-
-@pytest.fixture
-def synthetic_facility():
-    """Register a throwaway facility in the store and clean it up after."""
-    created = []
-
-    def _make(facility_id: str, facility_type: str, stock: dict, visits: list[int] | None = None):
-        facility = {
-            "id": facility_id,
-            "name": f"Test {facility_type} {facility_id}",
-            "state": "Maharashtra",
-            "district": "Pune",
-            "lat": 18.52,
-            "lon": 73.85,
-            "beds_total": 0,
-            "staff": [],
-            "facility_type": facility_type,
-        }
-        store.PHCS.append(facility)
-        store.PHC_BY_ID[facility_id] = facility
-        store.STOCK_HISTORY[facility_id] = stock
-        store.BED_HISTORY[facility_id] = {"occupied": [0] * 90}
-        store.STAFF_HISTORY[facility_id] = {"attendance_pct": [90] * 90}
-        if visits is not None:
-            store.FOOTFALL_HISTORY[facility_id] = {"visits": visits}
-        created.append(facility_id)
-        forecasting.clear_forecast_cache()
-        return facility
-
-    yield _make
-
-    for facility_id in created:
-        store.PHCS[:] = [p for p in store.PHCS if p["id"] != facility_id]
-        store.PHC_BY_ID.pop(facility_id, None)
-        store.STOCK_HISTORY.pop(facility_id, None)
-        store.BED_HISTORY.pop(facility_id, None)
-        store.STAFF_HISTORY.pop(facility_id, None)
-        store.FOOTFALL_HISTORY.pop(facility_id, None)
-    forecasting.clear_forecast_cache()
 
 
 def _stock_entry(resource: resource_types.ResourceType, start: float, daily_use: float) -> dict:

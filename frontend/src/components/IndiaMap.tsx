@@ -54,6 +54,24 @@ function dominantRisk(risks: Risk[]): Risk {
   return "low";
 }
 
+// Buckets a 0-100 public avg_risk_score into the same three risk colours
+// used everywhere else, so the public map reads consistently with the
+// officer console's palette even though the underlying metric is different
+// (a state-level composite, not a single PHC's forecast risk).
+export function scoreToRisk(score: number): Risk {
+  if (score >= 60) return "critical";
+  if (score >= 25) return "warning";
+  return "low";
+}
+
+export interface StateRiskMarker {
+  state: string;
+  lat: number;
+  lon: number;
+  riskScore: number;
+  facilityCount: number;
+}
+
 function createClusterIcon(cluster: L.MarkerCluster): L.DivIcon {
   const risks = cluster.getAllChildMarkers().map((m: L.Marker) => (m.options.alt as Risk) ?? "low");
   const count = cluster.getChildCount();
@@ -67,12 +85,26 @@ function createClusterIcon(cluster: L.MarkerCluster): L.DivIcon {
 }
 
 interface Props {
-  phcs: PHC[];
-  riskByPhc: Record<string, Risk>;
+  phcs?: PHC[];
+  riskByPhc?: Record<string, Risk>;
   recs?: RedistributionRec[];
+  // Public Transparency Portal mode: renders one marker per state coloured
+  // by its aggregate risk score instead of per-PHC dots, never shows
+  // redistribution arrows, and routes clicks through onStateClick instead
+  // of the officer console's /states/:state drill-down.
+  readOnly?: boolean;
+  stateMarkers?: StateRiskMarker[];
+  onStateClick?: (state: string) => void;
 }
 
-export default function IndiaMap({ phcs, riskByPhc, recs = [] }: Props) {
+export default function IndiaMap({
+  phcs = [],
+  riskByPhc = {},
+  recs = [],
+  readOnly = false,
+  stateMarkers = [],
+  onStateClick,
+}: Props) {
   const navigate = useNavigate();
 
   // Build a quick O(1) lookup map for lat/lon
@@ -109,8 +141,8 @@ export default function IndiaMap({ phcs, riskByPhc, recs = [] }: Props) {
         attribution='&copy; OpenStreetMap &copy; CARTO'
       />
 
-      {/* Transfer arrows — dashed Polylines from donor to recipient */}
-      {recs.map((r, i) => {
+      {/* Transfer arrows — dashed Polylines from donor to recipient (never shown in read-only/public mode) */}
+      {!readOnly && recs.map((r, i) => {
         const fromPhc = phcById.get(r.from_phc_id);
         const toPhc = phcById.get(r.to_phc_id);
         if (!fromPhc || !toPhc) return null;
@@ -140,8 +172,44 @@ export default function IndiaMap({ phcs, riskByPhc, recs = [] }: Props) {
         );
       })}
 
+      {/* Public portal mode — one CircleMarker per state, sized by facility count, coloured by aggregate risk score */}
+      {readOnly &&
+        stateMarkers.map((s) => {
+          const risk = scoreToRisk(s.riskScore);
+          return (
+            <CircleMarker
+              key={s.state}
+              center={[s.lat, s.lon]}
+              radius={10 + Math.min(10, Math.sqrt(s.facilityCount))}
+              pathOptions={{
+                color: riskColor[risk],
+                fillColor: riskColor[risk],
+                fillOpacity: 0.65,
+                weight: 2,
+              }}
+              eventHandlers={{
+                click: () => onStateClick?.(s.state),
+              }}
+            >
+              <Tooltip direction="top">
+                <div className="text-xs space-y-0.5">
+                  <div className="font-semibold">{s.state}</div>
+                  <div className="text-slate-500">{s.facilityCount} facilities monitored</div>
+                  <div
+                    className={`font-bold uppercase text-[10px] ${
+                      risk === "critical" ? "text-rose-600" : risk === "warning" ? "text-amber-600" : "text-emerald-600"
+                    }`}
+                  >
+                    Risk score: {s.riskScore}
+                  </div>
+                </div>
+              </Tooltip>
+            </CircleMarker>
+          );
+        })}
+
       {/* PHC dots — clustered above CLUSTER_THRESHOLD, plain CircleMarkers below it */}
-      {shouldCluster ? (
+      {!readOnly && (shouldCluster ? (
         <MarkerClusterGroup
           iconCreateFunction={createClusterIcon}
           showCoverageOnHover={false}
@@ -186,7 +254,7 @@ export default function IndiaMap({ phcs, riskByPhc, recs = [] }: Props) {
             </CircleMarker>
           );
         })
-      )}
+      ))}
     </MapContainer>
   );
 }

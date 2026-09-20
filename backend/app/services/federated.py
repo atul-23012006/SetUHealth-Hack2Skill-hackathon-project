@@ -16,13 +16,39 @@ Two levels are simulated, mirroring how this would run in production:
    API. Nations combine into a shared global prior without any raw record
    ever crossing a border, which is the property that makes this legally
    and diplomatically viable at BRICS scale.
+
+Both priors also report ``contributing_nodes_count`` and
+``model_confidence_score`` — the growth mechanism made visible as a number.
+See ``_model_confidence_score`` for exactly what that number is (and isn't).
 """
+import math
 import random
 
 from app.services import store
 from app.services.forecasting import forecast_all
 
 _PARTNER_SEED = 7
+
+
+def _model_confidence_score(contributing_nodes_count: int) -> float:
+    """A transparent, honestly-computed proxy for "how much the shared prior
+    benefits from federation so far" — not a model-fit confidence interval
+    on any specific prediction.
+
+    Follows the standard statistical shrinkage of a mean's standard error
+    with sample size (SE is proportional to 1/sqrt(n)) — the same law of
+    large numbers that is *why* federated averaging works at all: one node's
+    summary has nothing to be cross-checked against (0% here), and each
+    additional independent contributor narrows the estimate, with the
+    textbook diminishing-returns shape (going from 1 to 2 nodes gains far
+    more than going from 20 to 21). It is driven purely by
+    ``contributing_nodes_count`` — deliberately not tuned against any
+    target number — so it rises when a node joins and falls when one drops,
+    which is the entire point of surfacing it.
+    """
+    if contributing_nodes_count <= 1:
+        return 0.0
+    return round(100.0 * (1.0 - 1.0 / math.sqrt(contributing_nodes_count)), 1)
 
 
 def state_summary(state: str) -> dict:
@@ -83,11 +109,14 @@ def national_federated_prior() -> dict:
         if weight_total:
             prior[cat] = round(weighted_sum / weight_total, 3)
 
+    contributing_nodes_count = len(states)
     return {
         "participating_nodes": states,
         "total_facilities": total_facilities,
         "category_depletion_prior": prior,
         "node_summaries": summaries,
+        "contributing_nodes_count": contributing_nodes_count,
+        "model_confidence_score": _model_confidence_score(contributing_nodes_count),
     }
 
 
@@ -132,8 +161,11 @@ def brics_shared_prior() -> dict:
         if weight_total:
             global_prior[cat] = round(weighted_sum / weight_total, 3)
 
+    contributing_nodes_count = len(all_nodes)
     return {
         "nodes": all_nodes,
         "global_category_depletion_prior": global_prior,
         "note": "Only aggregated, weighted category-level statistics are exchanged between nation nodes. No facility-level or patient-level record ever leaves its country of origin.",
+        "contributing_nodes_count": contributing_nodes_count,
+        "model_confidence_score": _model_confidence_score(contributing_nodes_count),
     }

@@ -63,7 +63,9 @@ def national_federated_prior() -> dict:
     summaries = [state_summary(s) for s in states]
     total_facilities = sum(s["facility_count"] for s in summaries)
 
-    categories = {m["category"] for m in store.MEDICINES}
+    # Every tracked resource category, so a new non-medicine resource type
+    # is federated-averaged alongside the medicines without a change here.
+    categories = store.resource_categories()
     prior = {}
     for cat in categories:
         weighted_sum = 0.0
@@ -86,7 +88,9 @@ def national_federated_prior() -> dict:
 
 def _synthetic_partner_summary(nation: str, seed_offset: int) -> dict:
     rng = random.Random(_PARTNER_SEED + seed_offset)
-    categories = {m["category"] for m in store.MEDICINES}
+    # Every tracked resource category, so a new non-medicine resource type
+    # is federated-averaged alongside the medicines without a change here.
+    categories = store.resource_categories()
     rates = {cat: round(rng.uniform(1.5, 9.0), 3) for cat in categories}
     return {
         "node": nation,
@@ -113,7 +117,9 @@ def brics_shared_prior() -> dict:
         "warning_alerts": sum(s["warning_alerts"] for s in india["node_summaries"]),
     }
     all_nodes = [india_node] + partners
-    categories = {m["category"] for m in store.MEDICINES}
+    # Every tracked resource category, so a new non-medicine resource type
+    # is federated-averaged alongside the medicines without a change here.
+    categories = store.resource_categories()
     global_prior = {}
     for cat in categories:
         weighted_sum = sum(n["category_depletion_rates"].get(cat, 0) * n["facility_count"] for n in all_nodes)

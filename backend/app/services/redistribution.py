@@ -76,9 +76,12 @@ def recommend_for_medicine(medicine: str) -> list[dict]:
     for d_idx, d in enumerate(deficits):
         prob += pulp.lpSum(x[(s_idx, d_idx)] for s_idx in range(len(surplus))) + unmet[d_idx] == needed_vals[d_idx], f"Recipient_Need_{d_idx}"
 
-    # Look up medicine tier and calculate per-facility urgency weights to prioritize critical, high-tier shortages
-    med_info = next((m for m in store.MEDICINES if m["name"] == medicine), None)
-    tier = med_info.get("tier", 3) if med_info else 3
+    # Look up the resource's tier and calculate per-facility urgency weights to
+    # prioritize critical, high-tier shortages. Tier comes from the resource
+    # registry, so a non-medicine resource (blood, oxygen) is prioritised by
+    # the same rule without a special case here.
+    resource = store.resource_type(medicine)
+    tier = resource.tier if resource else 3
     base_unmet_penalty = 100000.0
     tier_weight = {1: 3.0, 2: 2.0, 3: 1.0}[tier]
 
@@ -327,8 +330,10 @@ def _apply_cross_medicine_donor_cap(recs: list[dict]) -> list[dict]:
 
 def recommend_all(state: str | None = None) -> list[dict]:
     out = []
-    for med in store.MEDICINES:
-        out.extend(recommend_for_medicine(med["name"]))
+    # Every tracked resource, not just medicines — adding a resource type to
+    # the registry is enough for it to start being redistributed.
+    for resource_key in store.resource_stock_keys():
+        out.extend(recommend_for_medicine(resource_key))
     out = _apply_cross_medicine_donor_cap(out)
     if state:
         out = [r for r in out if r["from_state"] == state or r["to_state"] == state]

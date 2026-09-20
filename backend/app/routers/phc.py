@@ -11,8 +11,14 @@ def list_states():
 
 
 @router.get("/phcs")
-def list_phcs(state: str | None = None, district: str | None = None):
-    phcs = store.phcs_in_state(state, district)
+def list_phcs(state: str | None = None, district: str | None = None,
+              facility_type: str = "PHC"):
+    """Facilities in the network. Defaults to PHCs — which is what this
+    endpoint has always returned and what its name promises. The roster also
+    holds other facility types (blood banks, district hospitals); pass
+    ``facility_type=Blood_Bank`` etc. to select one, or ``facility_type=all``
+    for every type. See app/data/resource_types.py for the registered types."""
+    phcs = store.phcs_in_state(state, district, None if facility_type == "all" else facility_type)
     out = []
     for p in phcs:
         beds = store.BED_HISTORY[p["id"]]["occupied"][-1]

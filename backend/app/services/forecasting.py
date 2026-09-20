@@ -177,7 +177,12 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
     # 7. Keep the existing surge-detection mechanism separately
     baseline_rate, recent_rate, surge_detected = check_surge(levels)
 
-    is_cold_chain = medicine in ("Insulin (Human)", "Oxytocin Injection")
+    # Cold-chain monitoring is a property of the resource, read from the
+    # registry — not a list of medicine names hardcoded in the engine. Any
+    # perishable resource (insulin, oxytocin, O-negative blood) is
+    # temperature-tracked identically.
+    resource = store.resource_type(medicine)
+    is_cold_chain = bool(resource and resource.is_perishable)
     temperature = store.get_facility_temp(phc_id) if is_cold_chain else None
     cold_chain_alert = (temperature > 8.0 or temperature < 2.0) if is_cold_chain else False
 
@@ -187,7 +192,13 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
         "phc_name": phc["name"],
         "state": phc["state"],
         "district": phc["district"],
+        "facility_type": phc.get("facility_type", "PHC"),
+        # `medicine` is the stock-history key and stays the display label every
+        # existing consumer already renders; `resource_id`/`resource_category`
+        # are additive, for consumers that work in generic resource terms.
         "medicine": medicine,
+        "resource_id": resource.id if resource else medicine,
+        "resource_category": record.get("category"),
         "unit": record["unit"],
         "current_level": current,
         "capacity": capacity,

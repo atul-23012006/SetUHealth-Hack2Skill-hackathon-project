@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { useCountUp } from "../lib/useCountUp";
 import { STATE_CENTROIDS } from "../lib/stateCentroids";
 import IndiaMap, { type StateRiskMarker } from "../components/IndiaMap";
+import HeroOrbLazy from "../components/HeroOrbLazy";
 import type { PublicNationalSummary, PublicStateSummary } from "../lib/types";
 
 function PublicStat({ label, value, thousands }: { label: string; value: string | number; thousands?: boolean }) {
@@ -66,15 +67,20 @@ export default function PublicPortal() {
 
   return (
     <div className="space-y-10">
-      <section>
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold text-ink-900 tracking-tight">
-          National Supply Network — Live Overview
-        </h1>
-        <p className="text-ink-600 mt-2 max-w-2xl">
-          Every figure below is a state or national aggregate, computed the same way SetuHealth's
-          federated layer computes them internally — no facility name, location, or
-          patient-adjacent data ever appears on this page.
-        </p>
+      <section className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] items-center gap-6">
+        <div>
+          <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl font-semibold text-ink-900 tracking-tight">
+            National Supply Network — Live Overview
+          </h1>
+          <p className="text-ink-600 mt-3 max-w-2xl">
+            Every figure below is a state or national aggregate, computed the same way SetuHealth's
+            federated layer computes them internally — no facility name, location, or
+            patient-adjacent data ever appears on this page.
+          </p>
+        </div>
+        <div className="w-[260px] h-[260px] sm:w-[360px] sm:h-[360px] md:w-[480px] md:h-[480px] mx-auto md:mx-0 md:justify-self-end">
+          <HeroOrbLazy />
+        </div>
       </section>
 
       <section className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 rounded-2xl p-6 grid grid-cols-2 md:grid-cols-5 gap-4">

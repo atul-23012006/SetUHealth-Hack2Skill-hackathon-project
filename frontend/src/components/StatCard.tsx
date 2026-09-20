@@ -4,6 +4,7 @@ interface Props {
   label: string;
   value: string | number;
   tone?: "default" | "critical" | "warning" | "good";
+  thousands?: boolean;
 }
 
 const toneClasses: Record<string, string> = {
@@ -13,8 +14,8 @@ const toneClasses: Record<string, string> = {
   good: "text-emerald-600",
 };
 
-export default function StatCard({ label, value, tone = "default" }: Props) {
-  const animatedValue = useCountUp(value);
+export default function StatCard({ label, value, tone = "default", thousands = false }: Props) {
+  const animatedValue = useCountUp(value, 900, thousands);
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
       <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</div>

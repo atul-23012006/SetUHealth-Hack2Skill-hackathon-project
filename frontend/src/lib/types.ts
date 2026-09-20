@@ -216,6 +216,8 @@ export interface PublicStateSummary {
   facility_count: number;
   avg_risk_score: number;
   critical_facility_count: number;
+  population_served: number;
+  critical_risk_per_100k: number;
   transfers_executed_30d: number;
   stockouts_prevented_30d: number;
   last_updated: string;
@@ -224,9 +226,11 @@ export interface PublicStateSummary {
 export interface PublicNationalSummary {
   states_covered: number;
   total_facilities_monitored: number;
+  population_served: number;
   avg_depletion_rate_by_category: Record<string, number>;
   critical_facility_count: number;
   avg_risk_score: number;
+  critical_risk_per_100k: number;
   transfers_executed_30d: number;
   stockouts_prevented_30d: number;
   last_updated: string;

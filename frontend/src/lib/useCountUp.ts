@@ -12,7 +12,11 @@ function parseValue(value: string | number) {
   return { prefix, numeric: parseFloat(numericStr), suffix, decimals };
 }
 
-export function useCountUp(value: string | number, durationMs = 900): string {
+// `thousands: true` renders the animated integer with locale thousands
+// separators (4,601,642 instead of 4601642) — for large plain counts like a
+// population total. Ignored for values with a decimal or a prefix/suffix,
+// where digit grouping would fight the existing formatting.
+export function useCountUp(value: string | number, durationMs = 900, thousands = false): string {
   const [display, setDisplay] = useState(() => String(value));
   const frameRef = useRef<number | null>(null);
 
@@ -23,6 +27,7 @@ export function useCountUp(value: string | number, durationMs = 900): string {
       return;
     }
     const { prefix, numeric, suffix, decimals } = parsed;
+    const useThousands = thousands && decimals === 0 && !prefix && !suffix;
     let startTime: number | null = null;
 
     const step = (timestamp: number) => {
@@ -30,7 +35,10 @@ export function useCountUp(value: string | number, durationMs = 900): string {
       const progress = Math.min((timestamp - startTime) / durationMs, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = numeric * eased;
-      setDisplay(`${prefix}${current.toFixed(decimals)}${suffix}`);
+      const formatted = useThousands
+        ? Math.round(current).toLocaleString()
+        : current.toFixed(decimals);
+      setDisplay(`${prefix}${formatted}${suffix}`);
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(step);
       }
@@ -40,7 +48,7 @@ export function useCountUp(value: string | number, durationMs = 900): string {
     return () => {
       if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     };
-  }, [value, durationMs]);
+  }, [value, durationMs, thousands]);
 
   return display;
 }

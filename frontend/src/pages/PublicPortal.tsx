@@ -6,8 +6,8 @@ import { STATE_CENTROIDS } from "../lib/stateCentroids";
 import IndiaMap, { type StateRiskMarker } from "../components/IndiaMap";
 import type { PublicNationalSummary, PublicStateSummary } from "../lib/types";
 
-function PublicStat({ label, value }: { label: string; value: string | number }) {
-  const animated = useCountUp(value, 1400);
+function PublicStat({ label, value, thousands }: { label: string; value: string | number; thousands?: boolean }) {
+  const animated = useCountUp(value, 1400, thousands);
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
       <div className="text-3xl font-bold text-white tabular-nums">{animated}</div>
@@ -57,6 +57,12 @@ export default function PublicPortal() {
   const lowestRisk = [...withFacilities].sort((a, b) => a.avg_risk_score - b.avg_risk_score)[0];
   const highestRisk = [...withFacilities].sort((a, b) => b.avg_risk_score - a.avg_risk_score)[0];
   const mostTransfers = [...states].sort((a, b) => b.transfers_executed_30d - a.transfers_executed_30d)[0];
+  // Per-capita, not per-facility: ranks by critical-risk facilities per
+  // 100,000 people served, which can (and does) order states differently
+  // than avg_risk_score above — a state with fewer, larger-catchment PHCs
+  // can carry more real per-capita exposure than one with more small PHCs.
+  const withPopulation = states.filter((s) => s.population_served > 0);
+  const highestPerCapita = [...withPopulation].sort((a, b) => b.critical_risk_per_100k - a.critical_risk_per_100k)[0];
 
   return (
     <div className="space-y-10">
@@ -69,10 +75,11 @@ export default function PublicPortal() {
         </p>
       </section>
 
-      <section className="bg-gradient-to-r from-teal-950 via-slate-900 to-slate-950 rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <section className="bg-gradient-to-r from-teal-950 via-slate-900 to-slate-950 rounded-2xl p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* "Facilities", not "PHCs": the network now also covers blood banks
             and district hospitals (see app/data/resource_types.py). */}
         <PublicStat label="Facilities monitored" value={national.total_facilities_monitored} />
+        <PublicStat label="Population served" value={national.population_served} thousands />
         <PublicStat label="States covered" value={national.states_covered} />
         <PublicStat label="Transfers executed (30d)" value={national.transfers_executed_30d} />
         <PublicStat label="Stockouts averted (30d)" value={national.stockouts_prevented_30d} />
@@ -92,7 +99,7 @@ export default function PublicPortal() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {lowestRisk && (
           <ImpactCard
             title="Lowest network risk"
@@ -103,6 +110,12 @@ export default function PublicPortal() {
           <ImpactCard
             title="Needs the most support"
             body={`${highestRisk.state} has ${highestRisk.critical_facility_count} of ${highestRisk.facility_count} facilities at critical stock risk right now — the highest concentration nationwide.`}
+          />
+        )}
+        {highestPerCapita && (
+          <ImpactCard
+            title="Highest per-capita exposure"
+            body={`${highestPerCapita.state} has ${highestPerCapita.critical_risk_per_100k} critical-risk facilities per 100,000 people served — a per-capita measure, since a state's facility count alone doesn't say how many people each one covers.`}
           />
         )}
         {mostTransfers && mostTransfers.transfers_executed_30d > 0 ? (

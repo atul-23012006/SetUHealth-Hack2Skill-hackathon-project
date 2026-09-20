@@ -46,12 +46,18 @@ export default function PublicStateDetail() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard label="Facilities monitored" value={summary.facility_count} />
+        <StatCard label="Population served" value={summary.population_served} thousands />
         <StatCard
           label="Network risk score"
           value={summary.avg_risk_score}
           tone={summary.avg_risk_score >= 60 ? "critical" : summary.avg_risk_score >= 25 ? "warning" : "good"}
         />
         <StatCard label="Critical-risk facilities" value={summary.critical_facility_count} tone="critical" />
+        <StatCard
+          label="Critical risk per 100k people"
+          value={summary.critical_risk_per_100k}
+          tone={summary.critical_risk_per_100k >= 2 ? "critical" : summary.critical_risk_per_100k >= 1 ? "warning" : "good"}
+        />
         <StatCard label="Transfers executed (30d)" value={summary.transfers_executed_30d} />
         <StatCard label="Stockouts averted (30d)" value={summary.stockouts_prevented_30d} tone="good" />
       </div>

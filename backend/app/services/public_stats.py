@@ -27,6 +27,18 @@ def _risk_score(critical_facility_count: int, warning_facility_count: int, facil
     return round(min(100.0, 100.0 * weighted / facility_count), 1)
 
 
+def _critical_risk_per_100k(critical_facility_count: int, population_served: int) -> float:
+    """Critical-risk facilities per 100,000 people in the served population —
+    a genuinely per-capita figure, unlike avg_risk_score (which is per
+    facility and so reads identically for a state with 10 tiny PHCs and one
+    with 10 PHCs covering ten times the population). Requires
+    population_served, which only exists on PHC records (see
+    generate_data.py's IPHS-grounded per-PHC catchment estimate)."""
+    if not population_served:
+        return 0.0
+    return round(100_000.0 * critical_facility_count / population_served, 2)
+
+
 def _transfers_in_window(days: int) -> list[dict]:
     cutoff = datetime.now() - timedelta(days=days)
     out = []
@@ -63,6 +75,10 @@ def state_summary() -> list[dict]:
                 s["critical_facility_count"], s["warning_facility_count"], s["facility_count"]
             ),
             "critical_facility_count": s["critical_facility_count"],
+            "population_served": s["population_served"],
+            "critical_risk_per_100k": _critical_risk_per_100k(
+                s["critical_facility_count"], s["population_served"]
+            ),
             # Every executed transfer, by definition, resolved or averted a
             # stockout at its destination facility — this is a direct count
             # of completed ledger entries, not a model estimate.
@@ -82,13 +98,16 @@ def national_summary() -> dict:
     total_facilities = prior["total_facilities"]
     total_critical = sum(s["critical_facility_count"] for s in prior["node_summaries"])
     total_warning = sum(s["warning_facility_count"] for s in prior["node_summaries"])
+    total_population = sum(s["population_served"] for s in prior["node_summaries"])
 
     return {
         "states_covered": len(prior["participating_nodes"]),
         "total_facilities_monitored": total_facilities,
+        "population_served": total_population,
         "avg_depletion_rate_by_category": prior["category_depletion_prior"],
         "critical_facility_count": total_critical,
         "avg_risk_score": _risk_score(total_critical, total_warning, total_facilities),
+        "critical_risk_per_100k": _critical_risk_per_100k(total_critical, total_population),
         "transfers_executed_30d": len(recent_transfers),
         "stockouts_prevented_30d": len(recent_transfers),
         "last_updated": datetime.now().isoformat(),

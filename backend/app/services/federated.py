@@ -27,6 +27,10 @@ _PARTNER_SEED = 7
 
 def state_summary(state: str) -> dict:
     phcs = [p for p in store.PHCS if p["state"] == state]
+    # population_served only exists on PHC records (see resource_types.py /
+    # generate_data.py) — non-PHC facility types don't have their own
+    # catchment population, so this only ever sums real PHC coverage.
+    population_served = sum(p.get("population_served", 0) for p in phcs)
     forecasts = [f for f in forecast_all(state=state)]
     by_category = {}
     critical_phc_ids = set()
@@ -53,6 +57,7 @@ def state_summary(state: str) -> dict:
         # counts once here but twice there.
         "critical_facility_count": len(critical_phc_ids),
         "warning_facility_count": len(warning_phc_ids),
+        "population_served": population_served,
     }
 
 

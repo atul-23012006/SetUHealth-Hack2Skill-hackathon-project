@@ -76,6 +76,12 @@ export default function Layout() {
             <NavLink to="/assistant" className={linkClass}>
               {t("assistant")}
             </NavLink>
+            <NavLink
+              to="/public"
+              className="ml-1 px-3 py-1.5 rounded-md text-sm font-medium border border-teal-600 text-teal-700 hover:bg-teal-50 transition-colors"
+            >
+              Public Portal
+            </NavLink>
           </nav>
           <div className="flex items-center gap-2">
             <button

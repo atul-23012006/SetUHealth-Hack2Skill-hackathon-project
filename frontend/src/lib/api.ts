@@ -13,6 +13,8 @@ import type {
   CapacityRecommendations,
   AuditEvent,
   ActingUser,
+  PublicStateSummary,
+  PublicNationalSummary,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -147,6 +149,8 @@ export const api = {
   auditLog: (limit = 100) =>
     client.get<AuditEvent[]>("/api/audit", { params: { limit } }).then((r) => r.data),
   listUsers: () => client.get<ActingUser[]>("/api/auth/users").then((r) => r.data),
+  publicStates: () => client.get<PublicStateSummary[]>("/api/public/states").then((r) => r.data),
+  publicNational: () => client.get<PublicNationalSummary>("/api/public/national").then((r) => r.data),
   downloadFhir: (transferId: string) =>
     client.get<object>(`/api/fhir/transfer/${transferId}`).then((r) => {
       const blob = new Blob([JSON.stringify(r.data, null, 2)], { type: "application/fhir+json" });

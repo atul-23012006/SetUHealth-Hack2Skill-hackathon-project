@@ -209,3 +209,26 @@ export interface ActingUser {
 
 export type Lang = "en" | "hi" | "mr" | "ta";
 
+// Public Transparency Portal — every field here is a state/national
+// aggregate from /api/public/*, never a PHC-level identifier.
+export interface PublicStateSummary {
+  state: string;
+  facility_count: number;
+  avg_risk_score: number;
+  critical_facility_count: number;
+  transfers_executed_30d: number;
+  stockouts_prevented_30d: number;
+  last_updated: string;
+}
+
+export interface PublicNationalSummary {
+  states_covered: number;
+  total_facilities_monitored: number;
+  avg_depletion_rate_by_category: Record<string, number>;
+  critical_facility_count: number;
+  avg_risk_score: number;
+  transfers_executed_30d: number;
+  stockouts_prevented_30d: number;
+  last_updated: string;
+}
+

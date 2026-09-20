@@ -224,7 +224,9 @@ export default function PHCDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <div className="text-sm font-semibold text-slate-700 mb-2">{t("bedOccupancy")}</div>
+          <div className="text-sm font-semibold text-slate-700 mb-2">
+            {t("bedOccupancy")} ({phc.dates.length} {t("days")})
+          </div>
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={bedChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" />
@@ -236,7 +238,9 @@ export default function PHCDetail() {
           </ResponsiveContainer>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <div className="text-sm font-semibold text-slate-700 mb-2">{t("staffAttendance")}</div>
+          <div className="text-sm font-semibold text-slate-700 mb-2">
+            {t("staffAttendance")} ({phc.dates.length} {t("days")})
+          </div>
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={attendanceChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" />

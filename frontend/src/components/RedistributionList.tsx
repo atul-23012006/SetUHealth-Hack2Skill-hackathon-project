@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { Brain } from "lucide-react";
 import type { RedistributionRec, Medicine } from "../lib/types";
 import { useLang } from "../lib/LangContext";
 import { api } from "../lib/api";
@@ -121,14 +122,14 @@ export default function RedistributionList({ recs, medicines, onTransferExecuted
                 {!hasPreloaded && (
                   <button
                     onClick={() => handleExplain(r)}
-                    className={`text-xs px-2 py-1 rounded-md border font-medium transition-all cursor-pointer ${
+                    className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md border font-medium transition-all cursor-pointer ${
                       isExplainOpen
                         ? "bg-violet-50 border-violet-200 text-violet-700"
                         : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-violet-50 hover:border-violet-200 hover:text-violet-700"
                     }`}
                     title="AI-generated explanation for this recommendation"
                   >
-                    🧠 Why?
+                    <Brain size={12} /> Why?
                   </button>
                 )}
                 <button
@@ -137,7 +138,7 @@ export default function RedistributionList({ recs, medicines, onTransferExecuted
                   className={`text-xs px-2.5 py-1 rounded-md border font-semibold transition-all cursor-pointer ${
                     executingIndex === i
                       ? "bg-slate-100 text-slate-400 border-slate-200"
-                      : "bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-600 hover:text-white hover:border-teal-600"
+                      : "bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-600 hover:text-white hover:border-brand-600"
                   }`}
                 >
                   {executingIndex === i ? "..." : t("execute")}
@@ -152,7 +153,11 @@ export default function RedistributionList({ recs, medicines, onTransferExecuted
                   <div className="text-xs text-slate-400 animate-pulse py-1">Generating explanation...</div>
                 ) : (
                   <div className="flex items-start gap-1.5">
-                    {hasPreloaded && <span className="text-[10px] text-violet-500 font-bold mt-0.5 shrink-0">🧠 AI</span>}
+                    {hasPreloaded && (
+                      <span className="flex items-center gap-0.5 text-[10px] text-violet-500 font-bold mt-0.5 shrink-0">
+                        <Brain size={11} /> AI
+                      </span>
+                    )}
                     <p className="text-xs text-slate-600 leading-relaxed">{explanationText}</p>
                   </div>
                 )}

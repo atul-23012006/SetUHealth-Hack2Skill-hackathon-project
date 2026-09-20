@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { Snowflake } from "lucide-react";
 import { api } from "../lib/api";
 import { useLang } from "../lib/LangContext";
 import type { PHCDetail as PHCDetailType, Forecast } from "../lib/types";
@@ -105,7 +106,7 @@ export default function MedicineStateDetail() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/" className="text-sm text-teal-600 hover:underline">
+        <Link to="/" className="text-sm text-brand-600 hover:underline">
           ← {t("dashboard")}
         </Link>
         <h1 className="text-2xl font-bold text-slate-900 mt-1">{medicine} — {state}</h1>
@@ -172,7 +173,7 @@ export default function MedicineStateDetail() {
                             ? "bg-rose-100 text-rose-800 border border-rose-300 animate-pulse"
                             : "bg-blue-50 text-blue-700 border border-blue-200"
                         }`}>
-                          ❄️ Cold Chain: {selectedForecast.temperature}°C
+                          <Snowflake size={12} /> Cold Chain: {selectedForecast.temperature}°C
                           {selectedForecast.cold_chain_alert && " (ALERT: Exceeded 8.0°C)"}
                         </span>
                       )}

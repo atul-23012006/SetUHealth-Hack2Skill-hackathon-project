@@ -28,7 +28,7 @@ export default function PublicStateDetail() {
     return (
       <div className="text-center text-slate-400 py-20 space-y-2">
         <p>No public data available for this state.</p>
-        <Link to="/public" className="text-teal-600 hover:underline text-sm">
+        <Link to="/public" className="text-brand-600 hover:underline text-sm">
           ← Back to the network overview
         </Link>
       </div>
@@ -37,12 +37,14 @@ export default function PublicStateDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to="/public" className="text-sm text-teal-600 hover:underline">
+      <Link to="/public" className="text-sm text-brand-600 hover:underline">
         ← Public network overview
       </Link>
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{summary.state}</h1>
-        <p className="text-sm text-slate-500 mt-1">Aggregate view only — this page never lists individual facilities.</p>
+        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold text-ink-900 tracking-tight">
+          {summary.state}
+        </h1>
+        <p className="text-sm text-ink-600 mt-1">Aggregate view only — this page never lists individual facilities.</p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard label="Facilities monitored" value={summary.facility_count} />

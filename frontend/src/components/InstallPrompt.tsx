@@ -37,15 +37,15 @@ export default function InstallPrompt() {
   };
 
   return (
-    <div className="bg-teal-50 border-t border-teal-200 text-teal-900 text-xs px-4 py-2 flex items-center justify-center gap-3 flex-wrap">
+    <div className="bg-brand-50 border-t border-brand-200 text-brand-900 text-xs px-4 py-2 flex items-center justify-center gap-3 flex-wrap">
       <span>Install SetuHealth for offline field use.</span>
       <button
         onClick={install}
-        className="bg-teal-600 text-white rounded-md px-2.5 py-1 font-medium hover:bg-teal-700 transition-colors"
+        className="bg-brand-600 text-white rounded-md px-2.5 py-1 font-medium hover:bg-brand-700 transition-colors"
       >
         Install
       </button>
-      <button onClick={dismiss} className="text-teal-700 hover:text-teal-900 font-medium">
+      <button onClick={dismiss} className="text-brand-700 hover:text-brand-900 font-medium">
         Dismiss
       </button>
     </div>

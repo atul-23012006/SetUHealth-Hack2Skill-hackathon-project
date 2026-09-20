@@ -1,23 +1,27 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  Building2, ClipboardList, User, Package, BarChart3, AlertTriangle, Hash, Bot,
+  Lock, FlaskConical, Ban, ShieldCheck, TrendingUp, CheckCircle2, Check, HeartPulse,
+} from "lucide-react";
 import { api } from "../lib/api";
 import { useLang } from "../lib/LangContext";
 import type { NationalFederatedPrior, BricsSharedPrior } from "../lib/types";
 
 const RAW_DATA_BLOCKED = [
-  { label: "Patient records", icon: "🏥" },
-  { label: "PHC facility IDs", icon: "🏢" },
-  { label: "Individual diagnoses", icon: "📋" },
-  { label: "Staff personal data", icon: "👤" },
-  { label: "Raw stock ledgers", icon: "📦" },
+  { label: "Patient records", icon: HeartPulse },
+  { label: "PHC facility IDs", icon: Building2 },
+  { label: "Individual diagnoses", icon: ClipboardList },
+  { label: "Staff personal data", icon: User },
+  { label: "Raw stock ledgers", icon: Package },
 ];
 
 const AGGREGATED_SHARED = [
-  { label: "Category depletion rate (avg)", icon: "📊" },
-  { label: "Critical alert count", icon: "⚠️" },
-  { label: "Facility count (count only)", icon: "🔢" },
-  { label: "Model gradient weights", icon: "🤖" },
-  { label: "Encrypted aggregated stats", icon: "🔐" },
+  { label: "Category depletion rate (avg)", icon: BarChart3 },
+  { label: "Critical alert count", icon: AlertTriangle },
+  { label: "Facility count (count only)", icon: Hash },
+  { label: "Model gradient weights", icon: Bot },
+  { label: "Encrypted aggregated stats", icon: Lock },
 ];
 
 // India is real seeded/generated PHC data. The BRICS partner nations are not
@@ -31,7 +35,7 @@ function SimulatedDataBadge({ className = "" }: { className?: string }) {
       className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-amber-400/15 border-amber-400/40 text-amber-300 ${className}`}
       title="Synthetic seeded data — not a live connection to this nation's health system"
     >
-      🧪 Simulated
+      <FlaskConical size={10} /> Simulated
     </span>
   );
 }
@@ -130,28 +134,28 @@ export default function Federated() {
         <div className="flex rounded-lg border border-slate-200 overflow-hidden shadow-sm">
           <button
             onClick={() => setPrivacyMode("aggregated")}
-            className={`px-4 py-2 text-sm font-medium transition-all ${
+            className={`px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5 ${
               !isRawMode
-                ? "bg-teal-600 text-white"
+                ? "bg-brand-600 text-white"
                 : "bg-white text-slate-600 hover:bg-slate-50"
             }`}
           >
-            🔒 Aggregated Only (default)
+            <Lock size={14} /> Aggregated Only (default)
           </button>
           <button
             onClick={() => setPrivacyMode("raw")}
-            className={`px-4 py-2 text-sm font-medium transition-all border-l border-slate-200 ${
+            className={`px-4 py-2 text-sm font-medium transition-all border-l border-slate-200 flex items-center gap-1.5 ${
               isRawMode
                 ? "bg-rose-600 text-white"
                 : "bg-white text-slate-600 hover:bg-slate-50"
             }`}
           >
-            🚫 Show Raw Data (blocked)
+            <Ban size={14} /> Show Raw Data (blocked)
           </button>
         </div>
         {isRawMode && (
-          <span className="text-xs text-rose-600 font-semibold animate-pulse">
-            ⚠ Raw data blocked — cannot cross node boundaries
+          <span className="flex items-center gap-1 text-xs text-rose-600 font-semibold animate-pulse">
+            <AlertTriangle size={12} /> Raw data blocked — cannot cross node boundaries
           </span>
         )}
       </div>
@@ -161,9 +165,9 @@ export default function Federated() {
         <div className={`absolute top-4 right-4 text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 border ${
           isRawMode
             ? "bg-rose-500/20 border-rose-500/30 text-rose-400"
-            : "bg-teal-500/20 border-teal-500/30 text-teal-400 animate-pulse"
+            : "bg-brand-500/20 border-brand-500/30 text-brand-400 animate-pulse"
         }`}>
-          <span className="text-[10px]">{isRawMode ? "🚫" : "🛡️"}</span>
+          {isRawMode ? <Ban size={12} /> : <ShieldCheck size={12} />}
           {isRawMode ? "RAW DATA — ACCESS BLOCKED" : "Privacy Guard: Secure Gradient Exchange Active"}
         </div>
 
@@ -203,7 +207,7 @@ export default function Federated() {
                     fontWeight="bold"
                     textAnchor="middle"
                   >
-                    🚫 ACCESS DENIED
+                    ACCESS DENIED
                   </text>
                 )}
                 {/* Data label on line when aggregated */}
@@ -235,19 +239,19 @@ export default function Federated() {
             <circle cx="80" cy="240" r="22" fill="#16a34a" className="node-pulse" style={{ transformOrigin: "80px 240px" }} />
             <text x="80" y="237" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">BRAZIL</text>
             <text x="80" y="248" fill="#bbf7d0" fontSize="7" textAnchor="middle">partner</text>
-            <text x="80" y="270" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">🧪 SIMULATED</text>
+            <text x="80" y="270" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">SIMULATED</text>
 
             {/* South Africa Node */}
             <circle cx="360" cy="80" r="22" fill="#eab308" className="node-pulse" style={{ transformOrigin: "360px 80px" }} />
             <text x="360" y="77" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">S.AFRICA</text>
             <text x="360" y="88" fill="#fef08a" fontSize="7" textAnchor="middle">partner</text>
-            <text x="360" y="110" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">🧪 SIMULATED</text>
+            <text x="360" y="110" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">SIMULATED</text>
 
             {/* Egypt/Partner Node */}
             <circle cx="360" cy="240" r="22" fill="#64748b" className="node-pulse" style={{ transformOrigin: "360px 240px" }} />
             <text x="360" y="237" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">EGYPT</text>
             <text x="360" y="248" fill="#cbd5e1" fontSize="7" textAnchor="middle">partner</text>
-            <text x="360" y="270" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">🧪 SIMULATED</text>
+            <text x="360" y="270" fill="#fbbf24" fontSize="6.5" fontWeight="bold" textAnchor="middle">SIMULATED</text>
 
             {/* Blocked X overlay in raw mode */}
             {isRawMode && (
@@ -265,7 +269,9 @@ export default function Federated() {
             they mix real (state) and simulated (BRICS partner) data. */}
         <div className="mt-5 bg-slate-800/60 border border-slate-700/40 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">📈 Model Confidence</div>
+            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <TrendingUp size={13} /> Model Confidence
+            </div>
             <span className="text-[10px] text-slate-500">grows as nodes join the federation</span>
           </div>
           <div className="space-y-3">
@@ -273,7 +279,7 @@ export default function Federated() {
               label="National (state nodes → India)"
               nodeCount={national.contributing_nodes_count}
               score={national.model_confidence_score}
-              barColor="bg-teal-400"
+              barColor="bg-brand-400"
             />
             <ConfidenceMeter
               label="Global (India + BRICS partners)"
@@ -293,28 +299,30 @@ export default function Federated() {
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className={`rounded-lg p-4 border ${isRawMode ? "bg-rose-950/40 border-rose-700/40" : "bg-slate-800/60 border-slate-700/40"}`}>
             <div className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              🚫 Stays Local (NEVER shared)
+              <Ban size={13} /> Stays Local (NEVER shared)
             </div>
             <ul className="space-y-1.5">
               {RAW_DATA_BLOCKED.map((item) => (
                 <li key={item.label} className="flex items-center gap-2 text-xs text-slate-300">
-                  <span>{item.icon}</span>
+                  <item.icon size={13} className="shrink-0 text-slate-400" />
                   <span>{item.label}</span>
                   <span className="ml-auto text-[10px] text-rose-500 font-semibold border border-rose-700/50 px-1.5 py-0.5 rounded">BLOCKED</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className={`rounded-lg p-4 border ${isRawMode ? "bg-slate-800/60 border-slate-700/40" : "bg-teal-950/40 border-teal-700/40"}`}>
-            <div className="text-xs font-bold text-teal-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              ✅ What Gets Shared (aggregated only)
+          <div className={`rounded-lg p-4 border ${isRawMode ? "bg-slate-800/60 border-slate-700/40" : "bg-brand-950/40 border-brand-700/40"}`}>
+            <div className="text-xs font-bold text-brand-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <CheckCircle2 size={13} /> What Gets Shared (aggregated only)
             </div>
             <ul className="space-y-1.5">
               {AGGREGATED_SHARED.map((item) => (
                 <li key={item.label} className="flex items-center gap-2 text-xs text-slate-300">
-                  <span>{item.icon}</span>
+                  <item.icon size={13} className="shrink-0 text-slate-400" />
                   <span>{item.label}</span>
-                  <span className="ml-auto text-[10px] text-teal-400 font-semibold border border-teal-700/50 px-1.5 py-0.5 rounded">✓ OK</span>
+                  <span className="ml-auto text-[10px] text-brand-400 font-semibold border border-brand-700/50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <Check size={10} /> OK
+                  </span>
                 </li>
               ))}
             </ul>
@@ -322,14 +330,14 @@ export default function Federated() {
         </div>
 
         <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-400 border-t border-slate-800/80 pt-3">
-          <div>
-            🔒 Encryption: <span className="text-teal-400 font-semibold">Homomorphic (Paillier)</span>
+          <div className="flex items-center gap-1">
+            <Lock size={11} /> Encryption: <span className="text-brand-400 font-semibold">Homomorphic (Paillier)</span>
           </div>
-          <div>
-            ⚠️ Patient Identifiers Leaked: <span className="text-green-400 font-semibold">0</span>
+          <div className="flex items-center gap-1">
+            <AlertTriangle size={11} /> Patient Identifiers Leaked: <span className="text-green-400 font-semibold">0</span>
           </div>
-          <div>
-            📦 Weight Payload: <span className="text-amber-400 font-semibold">~14.2 KB / node</span>
+          <div className="flex items-center gap-1">
+            <Package size={11} /> Weight Payload: <span className="text-amber-400 font-semibold">~14.2 KB / node</span>
           </div>
         </div>
       </div>
@@ -379,7 +387,7 @@ export default function Federated() {
         </div>
         <div className="text-xs text-slate-400 mb-2">{brics.nodes.map((n) => n.node).join(" · ")}</div>
         <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-          <span>🧪</span>
+          <FlaskConical size={14} className="shrink-0 mt-0.5" />
           <span>
             <strong>India</strong> reflects this platform's live generated PHC network. The BRICS partner
             nodes (Brazil, South Africa, Indonesia, Egypt) are a <strong>proof-of-concept</strong> for the

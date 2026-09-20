@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Search, Brain } from "lucide-react";
 import type { ConsumptionAnomaly } from "../lib/types";
 import { useLang } from "../lib/LangContext";
 import { api } from "../lib/api";
@@ -80,15 +81,17 @@ export default function AnomalyList({ anomalies }: { anomalies: ConsumptionAnoma
               </div>
               <button
                 onClick={() => investigate(a)}
-                className="shrink-0 text-xs px-2 py-1 rounded-md border font-medium transition-all cursor-pointer bg-slate-50 border-slate-200 text-slate-600 hover:bg-violet-50 hover:border-violet-200 hover:text-violet-700"
+                className="shrink-0 flex items-center gap-1 text-xs px-2 py-1 rounded-md border font-medium transition-all cursor-pointer bg-slate-50 border-slate-200 text-slate-600 hover:bg-violet-50 hover:border-violet-200 hover:text-violet-700"
               >
-                {loadingKey === a.phc_id ? "…" : `🔍 ${t("investigate")}`}
+                {loadingKey === a.phc_id ? "…" : (<><Search size={12} /> {t("investigate")}</>)}
               </button>
             </div>
             {notes[a.phc_id] && (
               <div className="mt-2 ml-1 pl-3 border-l-2 border-violet-200">
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  <span className="text-[10px] text-violet-500 font-bold mr-1">🧠 AI</span>
+                  <span className="inline-flex items-center gap-0.5 text-[10px] text-violet-500 font-bold mr-1">
+                    <Brain size={10} /> AI
+                  </span>
                   {notes[a.phc_id]}
                 </p>
               </div>

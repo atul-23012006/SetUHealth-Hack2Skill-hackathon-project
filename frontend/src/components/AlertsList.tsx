@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TrendingUp } from "lucide-react";
 import type { Forecast } from "../lib/types";
 import { useLang } from "../lib/LangContext";
 import { api } from "../lib/api";
@@ -51,8 +52,8 @@ export default function AlertsList({ alerts }: { alerts: Forecast[] }) {
                     {a.days_to_stockout === 0 ? t("outOfStock") : `${a.days_to_stockout} ${t("daysLeft")}`}
                   </span>
                   {a.surge_detected && (
-                    <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100 uppercase tracking-wide">
-                      ⚠️ {t("demandSurge")}
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100 uppercase tracking-wide">
+                      <TrendingUp size={11} /> {t("demandSurge")}
                     </span>
                   )}
                 </div>
@@ -68,7 +69,7 @@ export default function AlertsList({ alerts }: { alerts: Forecast[] }) {
               </div>
             </div>
             {explanations[k] && (
-              <div className="mt-2 text-sm bg-teal-50 border border-teal-100 text-teal-900 rounded-md p-2">
+              <div className="mt-2 text-sm bg-brand-50 border border-brand-100 text-brand-900 rounded-md p-2">
                 {explanations[k]}
               </div>
             )}

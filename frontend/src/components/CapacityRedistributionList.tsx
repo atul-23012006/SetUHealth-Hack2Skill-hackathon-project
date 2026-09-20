@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { BedDouble, Stethoscope, type LucideIcon } from "lucide-react";
 import type { CapacityRecommendations } from "../lib/types";
 import { useLang } from "../lib/LangContext";
 
@@ -13,7 +14,7 @@ export default function CapacityRedistributionList({ data }: { data: CapacityRec
 
   const row = (
     key: string,
-    icon: string,
+    Icon: LucideIcon,
     fromName: string,
     fromId: string,
     toName: string,
@@ -27,8 +28,8 @@ export default function CapacityRedistributionList({ data }: { data: CapacityRec
     <div key={key} className="py-3 flex items-center justify-between gap-3">
       <div className="min-w-0">
         <div className="font-medium text-slate-900 text-sm flex items-center gap-1.5">
-          <span>{icon}</span>
-          <span className="text-teal-700">{action}</span>
+          <Icon size={14} className="text-brand-600 shrink-0" />
+          <span className="text-brand-700">{action}</span>
           {high && <span className="text-[10px] font-bold text-rose-600 uppercase">● high</span>}
         </div>
         <div className="text-sm text-slate-500 truncate">
@@ -47,12 +48,14 @@ export default function CapacityRedistributionList({ data }: { data: CapacityRec
     <div className="divide-y divide-slate-100">
       {beds.length > 0 && (
         <div className="pt-1 pb-2">
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">🛏 Bed overflow</div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            <BedDouble size={12} /> Bed overflow
+          </div>
           <div className="divide-y divide-slate-100">
             {beds.map((b, i) =>
               row(
                 `bed-${i}`,
-                "🛏",
+                BedDouble,
                 b.to_phc_name,
                 b.to_phc_id,
                 b.from_phc_name,
@@ -69,12 +72,14 @@ export default function CapacityRedistributionList({ data }: { data: CapacityRec
       )}
       {staff.length > 0 && (
         <div className="pt-2 pb-1">
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">🧑‍⚕️ Staff shortage</div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            <Stethoscope size={12} /> Staff shortage
+          </div>
           <div className="divide-y divide-slate-100">
             {staff.map((s, i) =>
               row(
                 `staff-${i}`,
-                "🧑‍⚕️",
+                Stethoscope,
                 s.from_phc_name,
                 s.from_phc_id,
                 s.to_phc_name,

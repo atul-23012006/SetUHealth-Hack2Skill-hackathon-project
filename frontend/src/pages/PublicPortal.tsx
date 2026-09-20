@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { useCountUp } from "../lib/useCountUp";
 import { STATE_CENTROIDS } from "../lib/stateCentroids";
 import IndiaMap, { type StateRiskMarker } from "../components/IndiaMap";
+import HeroOrbLazy from "../components/HeroOrbLazy";
 import type { PublicNationalSummary, PublicStateSummary } from "../lib/types";
 
 function PublicStat({ label, value, thousands }: { label: string; value: string | number; thousands?: boolean }) {
@@ -11,7 +12,7 @@ function PublicStat({ label, value, thousands }: { label: string; value: string 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
       <div className="text-3xl font-bold text-white tabular-nums">{animated}</div>
-      <div className="text-xs text-teal-200 uppercase tracking-wide mt-1">{label}</div>
+      <div className="text-xs text-brand-200 uppercase tracking-wide mt-1">{label}</div>
     </div>
   );
 }
@@ -19,7 +20,7 @@ function PublicStat({ label, value, thousands }: { label: string; value: string 
 function ImpactCard({ title, body }: { title: string; body: string }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-      <div className="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-2">{title}</div>
+      <div className="text-xs font-semibold text-brand-700 uppercase tracking-wide mb-2">{title}</div>
       <p className="text-sm text-slate-700 leading-relaxed">{body}</p>
     </div>
   );
@@ -66,16 +67,23 @@ export default function PublicPortal() {
 
   return (
     <div className="space-y-10">
-      <section>
-        <h1 className="text-3xl font-bold text-slate-900">National Supply Network — Live Overview</h1>
-        <p className="text-slate-500 mt-1 max-w-2xl">
-          Every figure below is a state or national aggregate, computed the same way SetuHealth's
-          federated layer computes them internally — no facility name, location, or
-          patient-adjacent data ever appears on this page.
-        </p>
+      <section className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] items-center gap-6">
+        <div>
+          <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl font-semibold text-ink-900 tracking-tight">
+            National Supply Network — Live Overview
+          </h1>
+          <p className="text-ink-600 mt-3 max-w-2xl">
+            Every figure below is a state or national aggregate, computed the same way SetuHealth's
+            federated layer computes them internally — no facility name, location, or
+            patient-adjacent data ever appears on this page.
+          </p>
+        </div>
+        <div className="w-[260px] h-[260px] sm:w-[360px] sm:h-[360px] md:w-[480px] md:h-[480px] mx-auto md:mx-0 md:justify-self-end">
+          <HeroOrbLazy />
+        </div>
       </section>
 
-      <section className="bg-gradient-to-r from-teal-950 via-slate-900 to-slate-950 rounded-2xl p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+      <section className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 rounded-2xl p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* "Facilities", not "PHCs": the network now also covers blood banks
             and district hospitals (see app/data/resource_types.py). */}
         <PublicStat label="Facilities monitored" value={national.total_facilities_monitored} />

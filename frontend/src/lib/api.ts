@@ -66,7 +66,18 @@ export const api = {
   chat: (query: string, lang: string, state?: string) =>
     client.post<{ reply: string }>("/api/assistant/chat", { query, lang, state }).then((r) => r.data.reply),
   listTransfers: () => client.get<Transfer[]>("/api/transfers").then((r) => r.data),
-  executeTransfer: (from_phc_id: string, to_phc_id: string, medicine: string, quantity: number) => {
+  executeTransfer: (
+    from_phc_id: string,
+    to_phc_id: string,
+    medicine: string,
+    quantity: number,
+    // Lets the system auto-dispatch a simulated courier for routine,
+    // low-risk transfers instead of completing with no logistics step at
+    // all — see services/transfers.py's eligibility gate. Large,
+    // cross-state, or destination-critical transfers ignore this and
+    // execute exactly as before regardless.
+    autoExecute = true
+  ) => {
     if (!navigator.onLine) {
       const offlineQueue = JSON.parse(localStorage.getItem("offline_transfers") || "[]");
       const tempId = `TEMP-TR-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -114,6 +125,7 @@ export const api = {
         to_phc_id,
         medicine,
         quantity,
+        auto_execute: autoExecute,
       })
       .then((r) => r.data.manifest);
   },

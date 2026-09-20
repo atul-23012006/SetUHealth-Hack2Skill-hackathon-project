@@ -106,6 +106,14 @@ export interface BricsSharedPrior {
   model_confidence_score: number;
 }
 
+export interface TransferDispatch {
+  dispatch_id: string;
+  provider: string;
+  simulated: boolean;
+  eta_minutes: number;
+  dispatched_at: string;
+}
+
 export interface Transfer {
   id: string;
   medicine: string;
@@ -122,6 +130,12 @@ export interface Transfer {
   status: string;
   created_at: string;
   requested_by?: string | null;
+  // Phase 5 — autonomous dispatch for routine, low-risk transfers. See
+  // services/dispatch.py: auto_dispatched is only ever true for a
+  // simulated ground courier today, never a live logistics integration.
+  auto_dispatched?: boolean;
+  dispatch?: TransferDispatch | null;
+  auto_dispatch_declined_reason?: string | null;
 }
 
 export interface ActiveCrisis {

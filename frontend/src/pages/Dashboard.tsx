@@ -503,7 +503,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div id="stat-cards" className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard label={t("totalPhcs")} value={phcs.length} />
         <StatCard label={t("criticalAlerts")} value={criticalCount} tone="critical" />
         <StatCard label={t("warningAlerts")} value={warningCount} tone="warning" />
@@ -563,7 +563,7 @@ export default function Dashboard() {
 
       {/* Map + State List (pass recs for transfer arrows) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-2 h-[440px]">
+        <div id="national-map" className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-2 h-[440px]">
           <IndiaMap phcs={phcs} riskByPhc={riskByPhc} recs={recs} />
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 h-[440px] overflow-y-auto">

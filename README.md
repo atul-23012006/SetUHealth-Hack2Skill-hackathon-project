@@ -197,3 +197,13 @@ switches from mock to live responses.
 - Deployment target: containerized FastAPI + static frontend, deployable to
   any state's own infrastructure or a shared national cloud (see
   `backend/Dockerfile`, `frontend/Dockerfile`).
+- Interoperability for external systems (a state's e-Aushadhi/eVIN, a
+  hospital ERP, a DHIS2 instance) is documented in `docs/INTEROP.md`.
+
+## License and governance
+
+SetuHealth is licensed under the [GNU Affero General Public License v3.0](LICENSE)
+— see [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) for why, and what
+governance model this project intends to grow into as more organizations
+contribute. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how a new state or
+partner country technically onboards a node to the federated layer.

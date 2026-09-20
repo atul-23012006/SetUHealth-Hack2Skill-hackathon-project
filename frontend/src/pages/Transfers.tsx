@@ -52,6 +52,10 @@ export default function Transfers() {
           <p className="text-sm text-slate-500 mt-1">
             Tracking cross-district and cross-facility stock distributions executed across the grid.
           </p>
+          <p className="text-xs text-slate-400 mt-1">
+            🚚 Auto-dispatched badges mark routine, low-risk transfers a simulated courier handled inline
+            — no real logistics partner is integrated today.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg font-medium">
@@ -108,9 +112,19 @@ export default function Transfers() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                        {tr.status}
-                      </span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          {tr.status}
+                        </span>
+                        {tr.auto_dispatched && tr.dispatch && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100"
+                            title={`${tr.dispatch.dispatch_id} · dispatched ${new Date(tr.dispatch.dispatched_at).toLocaleString()}`}
+                          >
+                            🚚 Auto-dispatched — simulated courier, ETA {tr.dispatch.eta_minutes} min (haversine distance)
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {tr.requested_by || "—"}

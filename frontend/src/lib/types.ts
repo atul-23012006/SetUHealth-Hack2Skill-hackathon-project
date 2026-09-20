@@ -94,12 +94,24 @@ export interface NationalFederatedPrior {
   total_facilities: number;
   category_depletion_prior: Record<string, number>;
   node_summaries: StateNodeSummary[];
+  contributing_nodes_count: number;
+  model_confidence_score: number;
 }
 
 export interface BricsSharedPrior {
   nodes: StateNodeSummary[];
   global_category_depletion_prior: Record<string, number>;
   note: string;
+  contributing_nodes_count: number;
+  model_confidence_score: number;
+}
+
+export interface TransferDispatch {
+  dispatch_id: string;
+  provider: string;
+  simulated: boolean;
+  eta_minutes: number;
+  dispatched_at: string;
 }
 
 export interface Transfer {
@@ -118,6 +130,12 @@ export interface Transfer {
   status: string;
   created_at: string;
   requested_by?: string | null;
+  // Phase 5 — autonomous dispatch for routine, low-risk transfers. See
+  // services/dispatch.py: auto_dispatched is only ever true for a
+  // simulated ground courier today, never a live logistics integration.
+  auto_dispatched?: boolean;
+  dispatch?: TransferDispatch | null;
+  auto_dispatch_declined_reason?: string | null;
 }
 
 export interface ActiveCrisis {
@@ -208,4 +226,31 @@ export interface ActingUser {
 }
 
 export type Lang = "en" | "hi" | "mr" | "ta";
+
+// Public Transparency Portal — every field here is a state/national
+// aggregate from /api/public/*, never a PHC-level identifier.
+export interface PublicStateSummary {
+  state: string;
+  facility_count: number;
+  avg_risk_score: number;
+  critical_facility_count: number;
+  population_served: number;
+  critical_risk_per_100k: number;
+  transfers_executed_30d: number;
+  stockouts_prevented_30d: number;
+  last_updated: string;
+}
+
+export interface PublicNationalSummary {
+  states_covered: number;
+  total_facilities_monitored: number;
+  population_served: number;
+  avg_depletion_rate_by_category: Record<string, number>;
+  critical_facility_count: number;
+  avg_risk_score: number;
+  critical_risk_per_100k: number;
+  transfers_executed_30d: number;
+  stockouts_prevented_30d: number;
+  last_updated: string;
+}
 

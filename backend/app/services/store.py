@@ -6,9 +6,18 @@ Durability: the histories are still mirrored to JSON on mutation for fast
 reload, but the transactional ledger (transfers, crisis log, audit trail)
 lives in SQLite via ``services/db.py`` — so an active crisis and its audit
 history survive a backend restart.
+
+Generic resource model: ``PHCS`` is the *facility* roster and may contain
+facility types other than PHCs (each record carries ``facility_type``); use
+``facilities()`` to filter. ``STOCK_HISTORY`` is keyed by resource, not
+specifically by medicine — what those resources are is defined in
+``app/data/resource_types.py``, re-exported here so services have one place
+to read from. ``MEDICINES`` remains medicine-only, since it backs the
+medicine-specific clinical UI (tiers, NLEM metadata).
 """
 import json
 
+from app.data import resource_types
 from app.data.generate_data import build, OUT_DIR
 from app.services import db
 
@@ -86,13 +95,35 @@ def trigger_cold_chain_failure(phc_id: str):
     clear_forecast_cache()
 
 
-def phcs_in_state(state: str | None = None, district: str | None = None):
+def phcs_in_state(state: str | None = None, district: str | None = None,
+                  facility_type: str | None = None):
+    """Filter the facility roster. ``facility_type=None`` means every type —
+    callers that specifically want PHCs (the officer console's map and
+    facility list) pass ``facility_type="PHC"``."""
     out = PHCS
     if state:
         out = [p for p in out if p["state"] == state]
     if district:
         out = [p for p in out if p["district"] == district]
+    if facility_type:
+        out = [p for p in out if p.get("facility_type", "PHC") == facility_type]
     return out
+
+
+def resource_type(resource_key: str):
+    """Resource metadata by stock-history key or slug id. See
+    app/data/resource_types.py — this is the only place the engines learn
+    anything about what a resource *is*."""
+    return resource_types.get(resource_key)
+
+
+def resource_stock_keys() -> list[str]:
+    """Every tracked resource's stock-history key, in registry order."""
+    return resource_types.stock_keys()
+
+
+def resource_categories() -> set[str]:
+    return resource_types.categories()
 
 
 def states():

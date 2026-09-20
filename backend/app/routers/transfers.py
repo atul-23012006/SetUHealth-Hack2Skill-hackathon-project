@@ -11,6 +11,11 @@ class TransferRequest(BaseModel):
     to_phc_id: str
     medicine: str
     quantity: float
+    # When true, the system also attempts to auto-dispatch a simulated
+    # courier inline — see services/transfers.py's eligibility gate.
+    # Ineligible transfers (large, cross-state, or destination-critical)
+    # execute exactly as before regardless of this flag.
+    auto_execute: bool = False
 
 
 class PendingTransferPing(BaseModel):
@@ -40,7 +45,7 @@ def execute_transfer(req: TransferRequest, user: dict = Depends(auth.get_current
     try:
         manifest = transfers.create_and_execute_transfer(
             req.from_phc_id, req.to_phc_id, req.medicine, req.quantity,
-            requested_by=user["user_id"],
+            requested_by=user["user_id"], auto_execute=req.auto_execute,
         )
         return {"status": "success", "manifest": manifest}
     except ValueError as e:

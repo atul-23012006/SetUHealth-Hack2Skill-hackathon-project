@@ -36,6 +36,35 @@ function SimulatedDataBadge({ className = "" }: { className?: string }) {
   );
 }
 
+function ConfidenceMeter({
+  label,
+  nodeCount,
+  score,
+  barColor,
+}: {
+  label: string;
+  nodeCount: number;
+  score: number;
+  barColor: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className="text-slate-300">{label}</span>
+        <span className="text-slate-400">
+          {nodeCount} node{nodeCount === 1 ? "" : "s"} · <span className="font-bold text-white">{score}%</span>
+        </span>
+      </div>
+      <div className="h-1.5 w-full bg-slate-700/60 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${barColor} rounded-full transition-all duration-700`}
+          style={{ width: `${Math.max(2, score)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function Federated() {
   const { t } = useLang();
   const [national, setNational] = useState<NationalFederatedPrior | null>(null);
@@ -228,6 +257,36 @@ export default function Federated() {
               </>
             )}
           </svg>
+        </div>
+
+        {/* Model confidence — the network-effect number: more contributing
+            nodes narrows the shared prior's confidence interval (see
+            federated._model_confidence_score). Shown at both levels since
+            they mix real (state) and simulated (BRICS partner) data. */}
+        <div className="mt-5 bg-slate-800/60 border border-slate-700/40 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">📈 Model Confidence</div>
+            <span className="text-[10px] text-slate-500">grows as nodes join the federation</span>
+          </div>
+          <div className="space-y-3">
+            <ConfidenceMeter
+              label="National (state nodes → India)"
+              nodeCount={national.contributing_nodes_count}
+              score={national.model_confidence_score}
+              barColor="bg-teal-400"
+            />
+            <ConfidenceMeter
+              label="Global (India + BRICS partners)"
+              nodeCount={brics.contributing_nodes_count}
+              score={brics.model_confidence_score}
+              barColor="bg-indigo-400"
+            />
+          </div>
+          <p className="text-[11px] text-slate-400 mt-3">
+            Prediction confidence improves as more states join the federated network — each
+            additional independent node narrows the shared prior's uncertainty (standard error
+            shrinks with √n contributing nodes), the same reason federated averaging works at all.
+          </p>
         </div>
 
         {/* What is blocked vs shared — side-by-side panel */}

@@ -70,7 +70,9 @@ export default function PublicPortal() {
       </section>
 
       <section className="bg-gradient-to-r from-teal-950 via-slate-900 to-slate-950 rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <PublicStat label="PHCs monitored" value={national.total_facilities_monitored} />
+        {/* "Facilities", not "PHCs": the network now also covers blood banks
+            and district hospitals (see app/data/resource_types.py). */}
+        <PublicStat label="Facilities monitored" value={national.total_facilities_monitored} />
         <PublicStat label="States covered" value={national.states_covered} />
         <PublicStat label="Transfers executed (30d)" value={national.transfers_executed_30d} />
         <PublicStat label="Stockouts averted (30d)" value={national.stockouts_prevented_30d} />

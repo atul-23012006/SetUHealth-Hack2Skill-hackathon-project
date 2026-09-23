@@ -132,6 +132,15 @@ flowchart TB
   extends to any language), with browser-based voice input/output. Runs in a
   graceful offline mock mode with no API key so the app is fully demoable
   before a key is provisioned.
+- **Real-world data** (`backend/app/services/live_data.py`, `/api/live/*`): no API keys
+  needed. Live 7-day weather and air quality from [Open-Meteo](https://open-meteo.com),
+  converted into transparent rule-of-thumb signals (heavy rain, mosquito-borne conditions,
+  cold-chain heat stress) that can be loaded into the crisis simulator; place search;
+  World Bank health-system indicators for BRICS countries (Federated page); and real
+  hospitals/clinics from OpenStreetMap (Explore page). Each response names its source, an
+  unreachable feed shows as unavailable rather than being faked, and results are cached.
+  Set `LIVE_DATA_ENABLED=false` in `backend/.env` for fully offline demos. The network's own
+  facilities remain synthetic and are always labelled as such.
 - **Persistence** (`backend/app/services/db.py`): the in-memory store stays
   the hot read path, but executed transfers, the crisis log, and a full audit
   trail of every state mutation are written to a SQLite database — so an

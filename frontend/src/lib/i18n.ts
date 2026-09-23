@@ -1,9 +1,11 @@
 import type { Lang } from "./types";
+import { uiEn, uiHi, uiMr, uiTa } from "./i18nUi";
 
 type Dict = Record<string, string>;
 
 const en: Dict = {
   appName: "SetuHealth",
+  explore: "Explore",
   tagline: "National PHC Supply & Resource Grid",
   dashboard: "Dashboard",
   states: "States",
@@ -81,6 +83,7 @@ const en: Dict = {
 
 const hi: Dict = {
   appName: "सेतुहेल्थ",
+  explore: "एक्सप्लोर",
   tagline: "राष्ट्रीय PHC आपूर्ति एवं संसाधन नेटवर्क",
   dashboard: "डैशबोर्ड",
   states: "राज्य",
@@ -146,10 +149,19 @@ const hi: Dict = {
   lendStaff: "उधार दें",
   overConsumption: "अधिक खपत",
   underReporting: "कम रिपोर्टिंग",
+  actingAsNone: "— साइन इन नहीं —",
+  actingAsHint: "इस रूप में कार्यरत (स्थानांतरण अधिकृत करने के लिए उपयोग)",
+  offlineTransferSingular: "स्थानांतरण",
+  offlineTransferPlural: "स्थानांतरण",
+  offlineTransferWarning: "ऑफ़लाइन कतार में है और अभी तक सर्वर से सिंक नहीं हुआ है — जब तक सिंक न हो जाए, ब्राउज़र डेटा साफ़ न करें या डिवाइस न बदलें।",
+  requestedBy: "अनुरोधकर्ता",
+  transferDeniedTitle: "स्थानांतरण अस्वीकृत",
+  selectActingUser: "स्थानांतरण निष्पादित करने से पहले चुनें कि आप किस रूप में कार्यरत हैं (ऊपर-दाईं ओर)।",
 };
 
 const mr: Dict = {
   appName: "सेतूहेल्थ",
+  explore: "एक्सप्लोर",
   tagline: "राष्ट्रीय PHC पुरवठा आणि संसाधन ग्रिड",
   dashboard: "डॅशबोर्ड",
   states: "राज्ये",
@@ -215,10 +227,19 @@ const mr: Dict = {
   lendStaff: "उधार द्या",
   overConsumption: "अति वापर",
   underReporting: "कमी नोंद",
+  actingAsNone: "— साइन इन केलेले नाही —",
+  actingAsHint: "म्हणून कार्यरत (हस्तांतरण अधिकृत करण्यासाठी वापरले जाते)",
+  offlineTransferSingular: "हस्तांतरण",
+  offlineTransferPlural: "हस्तांतरणे",
+  offlineTransferWarning: "ऑफलाइन रांगेत आहे आणि अद्याप सर्व्हरशी सिंक झालेले नाही — सिंक होईपर्यंत ब्राउझर डेटा साफ करू नका किंवा डिव्हाइस बदलू नका.",
+  requestedBy: "विनंती करणारा",
+  transferDeniedTitle: "हस्तांतरण नाकारले",
+  selectActingUser: "हस्तांतरण करण्यापूर्वी तुम्ही कोणाच्या वतीने कार्यरत आहात ते निवडा (वर-उजवीकडे).",
 };
 
 const ta: Dict = {
   appName: "சேதுஹெல்த்",
+  explore: "ஆராய்க",
   tagline: "தேசிய PHC விநியோகம் & ஆதார கட்டம்",
   dashboard: "டாஷ்போர்டு",
   states: "மாநிலங்கள்",
@@ -284,13 +305,37 @@ const ta: Dict = {
   lendStaff: "கடன் தரவும்",
   overConsumption: "அதிக நுகர்வு",
   underReporting: "குறை பதிவு",
+  actingAsNone: "— உள்நுழையவில்லை —",
+  actingAsHint: "செயல்படும் அடையாளம் (மாற்றங்களை அங்கீகரிக்கப் பயன்படும்)",
+  offlineTransferSingular: "மாற்றம்",
+  offlineTransferPlural: "மாற்றங்கள்",
+  offlineTransferWarning: "ஆஃப்லைனில் வரிசையில் உள்ளது, இன்னும் சர்வருடன் ஒத்திசைக்கப்படவில்லை — ஒத்திசைவு முடியும் வரை உலாவி தரவை அழிக்காதீர்கள் அல்லது சாதனத்தை மாற்றாதீர்கள்.",
+  requestedBy: "கோரியவர்",
+  transferDeniedTitle: "மாற்றம் நிராகரிக்கப்பட்டது",
+  selectActingUser: "மாற்றத்தை நிறைவேற்றும் முன் நீங்கள் யாராக செயல்படுகிறீர்கள் என்பதைத் தேர்ந்தெடுக்கவும் (மேல்-வலது).",
 };
 
-const dicts: Record<Lang, Dict> = { en, hi, mr, ta };
+// The newer UI strings live in i18nUi.ts; merged here so there is one lookup.
+const dicts: Record<Lang, Dict> = {
+  en: { ...en, ...uiEn },
+  hi: { ...hi, ...uiHi },
+  mr: { ...mr, ...uiMr },
+  ta: { ...ta, ...uiTa },
+};
 
-export function t(lang: Lang, key: keyof typeof en): string {
-  return dicts[lang]?.[key] ?? en[key] ?? key;
+export type TranslateVars = Record<string, string | number>;
+
+// Looks a key up in the language, falling back to English, then to the key
+// itself. `{name}` placeholders are filled from `vars`.
+export function t(lang: Lang, key: string, vars?: TranslateVars): string {
+  const template = dicts[lang]?.[key] ?? dicts.en[key] ?? key;
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (whole, name) => (name in vars ? String(vars[name]) : whole));
 }
+
+/** Every key the English dictionary defines; used by the parity test. */
+export const ALL_KEYS = Object.keys(dicts.en);
+export const DICTIONARIES = dicts;
 
 export const LANGUAGES: { code: Lang; label: string; speechCode: string }[] = [
   { code: "en", label: "English", speechCode: "en-IN" },

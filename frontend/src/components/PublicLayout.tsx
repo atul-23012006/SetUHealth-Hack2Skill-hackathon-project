@@ -1,35 +1,61 @@
-import { Link, Outlet } from "react-router-dom";
+import { Suspense } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import TourButton from "./TourButton";
+import BrandMark from "./BrandMark";
+import { useLang } from "../lib/LangContext";
+import { LANGUAGES } from "../lib/i18n";
+import PageLoader from "./PageLoader";
 
 // Deliberately minimal and separate from components/Layout.tsx: no "acting
 // as" user selector, no offline-queue banner, no transfer-execute affordances
 // — this surface is read-only and needs none of the officer console's state.
 export default function PublicLayout() {
+  const location = useLocation();
+  const { lang, setLang, t } = useLang();
   return (
-    <div className="min-h-screen flex flex-col bg-surface-warm">
-      <header className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 text-white">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
+    <div className="flex min-h-screen flex-col bg-surface-warm">
+      <header className="relative bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 text-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3.5">
           <Link to="/public" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold">
-              S
-            </div>
+            <BrandMark tone="public" />
             <div>
-              <div className="font-semibold leading-tight">SetuHealth Public Network</div>
-              <div className="text-xs text-brand-300 leading-tight">Open, aggregate-only transparency portal</div>
+              <div className="font-semibold leading-tight">{t("pub.layout.title")}</div>
+              <div className="text-xs leading-tight text-brand-300">{t("pub.layout.sub")}</div>
             </div>
           </Link>
-          <Link
-            to="/"
-            className="text-xs border border-brand-700 text-brand-200 hover:bg-brand-900/40 rounded-md px-3 py-1.5 transition-colors"
-          >
-            Officer Console →
-          </Link>
+          <div className="flex items-center gap-2">
+            <TourButton key={location.pathname} tone="dark" />
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as typeof lang)}
+              aria-label="Language"
+              className="rounded-lg border border-brand-700 bg-transparent px-2 py-1.5 text-xs text-brand-200"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="text-slate-900">
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <Link
+              to="/"
+              className="rounded-lg border border-brand-700 px-3 py-1.5 text-xs text-brand-200 transition-colors hover:bg-brand-900/40"
+            >
+              {t("pub.layout.console")}
+            </Link>
+          </div>
         </div>
+        <span className="scroll-progress" aria-hidden="true" />
       </header>
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
-        <Outlet />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+        <div key={location.pathname} className="page-enter">
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
+        </div>
       </main>
-      <footer className="text-center text-xs text-slate-400 py-4">
-        SetuHealth Public Network — every figure here is a state or national aggregate; no facility-level or patient data is ever shown.
+      <footer className="py-5 text-center text-xs text-slate-400">
+        {t("pub.footer")}
       </footer>
     </div>
   );

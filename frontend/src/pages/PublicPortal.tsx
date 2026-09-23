@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowDown, LifeBuoy, Lock, ShieldCheck, ShieldOff, Truck, Users, type LucideIcon } from "lucide-react";
 import { api } from "../lib/api";
+import PageLoader from "../components/PageLoader";
+import { useLang } from "../lib/LangContext";
 import { useCountUp } from "../lib/useCountUp";
 import { STATE_CENTROIDS } from "../lib/stateCentroids";
 import IndiaMap, { type StateRiskMarker } from "../components/IndiaMap";
@@ -8,25 +11,38 @@ import HeroOrbLazy from "../components/HeroOrbLazy";
 import type { PublicNationalSummary, PublicStateSummary } from "../lib/types";
 
 function PublicStat({ label, value, thousands }: { label: string; value: string | number; thousands?: boolean }) {
-  const animated = useCountUp(value, 1400, thousands);
+  const animated = useCountUp(value, 1600, thousands);
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
-      <div className="text-3xl font-bold text-white tabular-nums">{animated}</div>
-      <div className="text-xs text-brand-200 uppercase tracking-wide mt-1">{label}</div>
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-400/40 hover:bg-white/10">
+      <div className="text-3xl font-bold tabular-nums text-white">{animated}</div>
+      <div className="mt-1 text-xs uppercase tracking-wide text-brand-200">{label}</div>
     </div>
   );
 }
 
-function ImpactCard({ title, body }: { title: string; body: string }) {
+function ImpactCard({ title, body, icon: Icon, tone }: { title: string; body: string; icon: LucideIcon; tone: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-      <div className="text-xs font-semibold text-brand-700 uppercase tracking-wide mb-2">{title}</div>
-      <p className="text-sm text-slate-700 leading-relaxed">{body}</p>
+    <div className="card card-lift group p-5">
+      <div className={`mb-3 grid h-9 w-9 place-items-center rounded-xl ${tone} transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3`}>
+        <Icon size={18} aria-hidden="true" />
+      </div>
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-700">{title}</div>
+      <p className="text-sm leading-relaxed text-slate-700">{body}</p>
     </div>
+  );
+}
+
+function TrustBadge({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200 backdrop-blur">
+      {icon}
+      {children}
+    </span>
   );
 }
 
 export default function PublicPortal() {
+  const { t } = useLang();
   const navigate = useNavigate();
   const [national, setNational] = useState<PublicNationalSummary | null>(null);
   const [states, setStates] = useState<PublicStateSummary[]>([]);
@@ -41,7 +57,7 @@ export default function PublicPortal() {
   }, []);
 
   if (loading || !national) {
-    return <div className="text-center text-slate-400 py-20">Loading public network overview…</div>;
+    return <PageLoader label={t("pub.loading")} />;
   }
 
   const stateMarkers: StateRiskMarker[] = states
@@ -67,38 +83,85 @@ export default function PublicPortal() {
 
   return (
     <div className="space-y-10">
-      <section className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] items-center gap-6">
-        <div>
-          <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl font-semibold text-ink-900 tracking-tight">
-            National Supply Network — Live Overview
-          </h1>
-          <p className="text-ink-600 mt-3 max-w-2xl">
-            Every figure below is a state or national aggregate, computed the same way SetuHealth's
-            federated layer computes them internally — no facility name, location, or
-            patient-adjacent data ever appears on this page.
-          </p>
+      <section
+        id="public-hero"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-950 via-slate-900 to-slate-950 text-white shadow-2xl"
+      >
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 -top-24 h-96 w-96 animate-blob rounded-full bg-brand-500/25 blur-3xl" />
+          <div className="absolute -bottom-32 right-0 h-[26rem] w-[26rem] animate-blob-slow rounded-full bg-gold-400/15 blur-3xl" />
+          <div className="bg-grid absolute inset-0" />
         </div>
-        <div className="w-[260px] h-[260px] sm:w-[360px] sm:h-[360px] md:w-[480px] md:h-[480px] mx-auto md:mx-0 md:justify-self-end">
-          <HeroOrbLazy />
+
+        <div className="relative grid items-center gap-4 p-6 sm:p-10 md:grid-cols-[1.1fr_1fr]">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-brand-200 backdrop-blur">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-400" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              {t("pub.eyebrow")}
+            </div>
+            <h1 className="mt-5 font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight sm:text-5xl">
+              {t("pub.title.a")}<span className="text-gradient">{t("pub.title.b")}</span>
+            </h1>
+            <p className="mt-4 max-w-xl leading-relaxed text-slate-300">
+              {t("pub.lead")}
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => document.getElementById("public-map")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-gold-400 to-gold-500 px-5 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-gold-500/30 hover:-translate-y-0.5 hover:from-gold-300 hover:to-gold-400"
+              >
+                {t("pub.cta.map")} <ArrowDown size={15} aria-hidden="true" />
+              </button>
+              <Link
+                to="/"
+                className="rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              >
+                {t("pub.cta.console")}
+              </Link>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <TrustBadge icon={<Lock size={12} aria-hidden="true" />}>{t("pub.badge.aggregates")}</TrustBadge>
+              <TrustBadge icon={<ShieldOff size={12} aria-hidden="true" />}>{t("pub.badge.noFacility")}</TrustBadge>
+              <TrustBadge icon={<ShieldCheck size={12} aria-hidden="true" />}>{t("pub.badge.noPatient")}</TrustBadge>
+            </div>
+          </div>
+
+          <div id="public-orb" className="relative mx-auto h-[280px] w-[280px] sm:h-[380px] sm:w-[380px] md:h-[470px] md:w-[470px]">
+            <HeroOrbLazy />
+            <div className="animate-float absolute left-0 top-10 hidden rounded-xl border border-white/15 bg-slate-900/60 px-3 py-2 text-xs backdrop-blur md:block">
+              <div className="text-lg font-bold leading-none text-gold-300">{national.states_covered}</div>
+              <div className="mt-0.5 text-slate-300">{t("pub.chip.states")}</div>
+            </div>
+            <div className="animate-float-slow absolute bottom-12 right-0 hidden rounded-xl border border-white/15 bg-slate-900/60 px-3 py-2 text-xs backdrop-blur md:block">
+              <div className="text-lg font-bold leading-none text-brand-300">{national.total_facilities_monitored}</div>
+              <div className="mt-0.5 text-slate-300">{t("pub.chip.facilities")}</div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          id="public-stats"
+          className="stagger relative grid grid-cols-2 gap-4 border-t border-white/10 bg-white/[0.03] p-5 md:grid-cols-5"
+        >
+          {/* "Facilities", not "PHCs": the network now also covers blood banks
+              and district hospitals (see app/data/resource_types.py). */}
+          <PublicStat label={t("pub.stat.facilities")} value={national.total_facilities_monitored} />
+          <PublicStat label={t("pub.stat.population")} value={national.population_served} thousands />
+          <PublicStat label={t("pub.stat.states")} value={national.states_covered} />
+          <PublicStat label={t("pub.stat.transfers")} value={national.transfers_executed_30d} />
+          <PublicStat label={t("pub.stat.averted")} value={national.stockouts_prevented_30d} />
         </div>
       </section>
 
-      <section className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 rounded-2xl p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-        {/* "Facilities", not "PHCs": the network now also covers blood banks
-            and district hospitals (see app/data/resource_types.py). */}
-        <PublicStat label="Facilities monitored" value={national.total_facilities_monitored} />
-        <PublicStat label="Population served" value={national.population_served} thousands />
-        <PublicStat label="States covered" value={national.states_covered} />
-        <PublicStat label="Transfers executed (30d)" value={national.transfers_executed_30d} />
-        <PublicStat label="Stockouts averted (30d)" value={national.stockouts_prevented_30d} />
-      </section>
-
-      <section>
+      <section id="public-map">
         <div className="flex items-baseline justify-between mb-2">
-          <h2 className="text-sm font-semibold text-slate-700">Network risk by state</h2>
-          <span className="text-xs text-slate-400">Click a state for its aggregate detail</span>
+          <h2 className="text-sm font-semibold text-slate-700">{t("pub.map.title")}</h2>
+          <span className="text-xs text-slate-400">{t("pub.map.hint")}</span>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-2 h-[440px]">
+        <div className="card p-2 h-[440px]">
           <IndiaMap
             readOnly
             stateMarkers={stateMarkers}
@@ -107,36 +170,47 @@ export default function PublicPortal() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section id="public-insights" className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {lowestRisk && (
           <ImpactCard
-            title="Lowest network risk"
-            body={`${lowestRisk.state} currently has the network's lowest aggregate risk score (${lowestRisk.avg_risk_score}/100) across ${lowestRisk.facility_count} monitored facilities.`}
+            icon={ShieldCheck}
+            tone="bg-emerald-50 text-emerald-600"
+            title={t("pub.insight.lowest")}
+            body={t("pub.insight.lowest.body", { state: lowestRisk.state, score: lowestRisk.avg_risk_score, n: lowestRisk.facility_count })}
           />
         )}
         {highestRisk && (
           <ImpactCard
-            title="Needs the most support"
-            body={`${highestRisk.state} has ${highestRisk.critical_facility_count} of ${highestRisk.facility_count} facilities at critical stock risk right now — the highest concentration nationwide.`}
+            icon={LifeBuoy}
+            tone="bg-rose-50 text-rose-600"
+            title={t("pub.insight.highest")}
+            body={t("pub.insight.highest.body", { state: highestRisk.state, c: highestRisk.critical_facility_count, n: highestRisk.facility_count })}
           />
         )}
         {highestPerCapita && (
           <ImpactCard
-            title="Highest per-capita exposure"
-            body={`${highestPerCapita.state} has ${highestPerCapita.critical_risk_per_100k} critical-risk facilities per 100,000 people served — a per-capita measure, since a state's facility count alone doesn't say how many people each one covers.`}
+            icon={Users}
+            tone="bg-amber-50 text-amber-600"
+            title={t("pub.insight.percapita")}
+            body={t("pub.insight.percapita.body", { state: highestPerCapita.state, v: highestPerCapita.critical_risk_per_100k })}
           />
         )}
         {mostTransfers && mostTransfers.transfers_executed_30d > 0 ? (
           <ImpactCard
-            title="Most active redistribution"
-            body={`${mostTransfers.state} received ${mostTransfers.transfers_executed_30d} redistribution transfer${
-              mostTransfers.transfers_executed_30d === 1 ? "" : "s"
-            } in the last 30 days, each one averting a stockout before it happened.`}
+            icon={Truck}
+            tone="bg-brand-50 text-brand-600"
+            title={t("pub.insight.active")}
+            body={t(mostTransfers.transfers_executed_30d === 1 ? "pub.insight.active.one" : "pub.insight.active.many", {
+              state: mostTransfers.state,
+              n: mostTransfers.transfers_executed_30d,
+            })}
           />
         ) : (
           <ImpactCard
-            title="Redistribution network"
-            body={`${national.transfers_executed_30d} redistribution transfers completed nationwide in the last 30 days, moving supply to facilities before they ran out.`}
+            icon={Truck}
+            tone="bg-brand-50 text-brand-600"
+            title={t("pub.insight.network")}
+            body={t("pub.insight.network.body", { n: national.transfers_executed_30d })}
           />
         )}
       </section>

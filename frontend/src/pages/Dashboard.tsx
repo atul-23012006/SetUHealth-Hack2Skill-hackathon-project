@@ -3,8 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   WifiOff, Play, Square, AlertTriangle, FlaskConical, Waves, Bug, Microscope,
   Snowflake, Loader2, RotateCcw, Globe, Brain, Search, Building2, ExternalLink,
+  BedDouble, UserCheck, BellRing,
 } from "lucide-react";
 import { api } from "../lib/api";
+import { useCountUp } from "../lib/useCountUp";
+import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
 import type {
   PHC, Forecast, RedistributionRec, Risk, ActiveCrisis,
@@ -17,6 +20,13 @@ import RedistributionList from "../components/RedistributionList";
 import CountdownClock from "../components/CountdownClock";
 import AnomalyList from "../components/AnomalyList";
 import CapacityRedistributionList from "../components/CapacityRedistributionList";
+import LiveSignalsPanel from "../components/LiveSignalsPanel";
+import WeatherImpactPanel from "../components/WeatherImpactPanel";
+
+// Animated number for panels that are not StatCards.
+function CountUp({ value, thousands = false }: { value: string | number; thousands?: boolean }) {
+  return <>{useCountUp(value, 1200, thousands)}</>;
+}
 
 const riskRank: Record<Risk, number> = { critical: 2, warning: 1, low: 0 };
 
@@ -52,6 +62,14 @@ export default function Dashboard() {
   const [anomalies, setAnomalies] = useState<ConsumptionAnomaly[]>([]);
   const [capacity, setCapacity] = useState<CapacityRecommendations | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Weather scenario: when on, alerts and recommendations are planned against the
+  // real weather outlook. Read through a ref so loadData keeps a stable identity.
+  const [weatherAdjusted, setWeatherAdjusted] = useState(false);
+  const [weatherIntensity, setWeatherIntensity] = useState(1);
+  const scenarioRef = useRef<{ intensity: number } | undefined>(undefined);
+  scenarioRef.current = weatherAdjusted ? { intensity: weatherIntensity } : undefined;
+  const [scenarioError, setScenarioError] = useState(false);
 
   // Online status tracking
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -93,8 +111,9 @@ export default function Dashboard() {
     Promise.all([
       api.phcs(),
       api.forecastAll(),
-      api.alerts(undefined, 8),
-      api.redistribution(),
+      // A failing scenario (weather feed down) falls back to the baseline instead of blanking the page.
+      api.alerts(undefined, 8, scenarioRef.current).catch(() => { setScenarioError(true); return api.alerts(undefined, 8); }),
+      api.redistribution(undefined, undefined, undefined, scenarioRef.current).catch(() => { setScenarioError(true); return api.redistribution(); }),
       api.states(),
       api.activeCrises(),
       api.medicines(),
@@ -129,6 +148,16 @@ export default function Dashboard() {
   }, [selectedState]);
 
   useEffect(() => { loadData(true); }, []);
+
+  // Re-plan when the scenario switch or its strength changes (skipping the first render).
+  const scenarioMounted = useRef(false);
+  useEffect(() => {
+    if (!scenarioMounted.current) { scenarioMounted.current = true; return; }
+    setScenarioError(false);
+    const id = setTimeout(() => loadData(false), 450);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weatherAdjusted, weatherIntensity]);
 
   // Auto-poll active crises every 5 seconds while a crisis is running
   useEffect(() => {
@@ -220,6 +249,17 @@ export default function Dashboard() {
 
   const openStateModal = (medicine: string, state: string) => {
     navigate(`/medicines/${encodeURIComponent(medicine)}/states/${encodeURIComponent(state)}`);
+  };
+
+  // Real weather signal -> pre-fill the crisis simulator (never runs it).
+  const [simFlash, setSimFlash] = useState(false);
+  const loadSignalIntoSimulator = (state: string, crisis: string) => {
+    setTargetType("state");
+    setSelectedState(state);
+    setCrisisType(crisis);
+    document.getElementById("crisis-simulator")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setSimFlash(true);
+    setTimeout(() => setSimFlash(false), 2400);
   };
 
   const handleTriggerCrisis = async () => {
@@ -320,7 +360,7 @@ export default function Dashboard() {
     ? Math.round(phcs.reduce((s, p) => s + (p.attendance_pct ?? 0), 0) / phcs.length)
     : 0;
 
-  if (loading) return <div className="text-center text-slate-400 py-20">{t("loading")}</div>;
+  if (loading) return <PageLoader label={t("loading")} />;
 
   return (
     <div className="space-y-6">
@@ -364,26 +404,53 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Page Header with Demo Button */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">National PHC Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Real-time supply intelligence across {phcs.length} primary health centres
-          </p>
+      {/* Hero */}
+      <div
+        id="dashboard-hero"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-950 via-slate-900 to-slate-950 p-6 text-white shadow-xl sm:p-8"
+      >
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-16 -top-24 h-72 w-72 animate-blob rounded-full bg-brand-500/30 blur-3xl" />
+          <div className="absolute -right-10 top-6 h-64 w-64 animate-blob-slow rounded-full bg-gold-400/20 blur-3xl" />
+          <div className="bg-grid absolute inset-0" />
         </div>
-        <button
-          id="demo-mode-btn"
-          onClick={demoRunning ? stopDemo : runDemo}
-          className={`flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all shadow-sm whitespace-nowrap ${
-            demoRunning
-              ? "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100"
-              : "bg-slate-900 border-slate-800 text-white hover:bg-slate-700 shadow-slate-900/30"
-          }`}
-        >
-          {demoRunning ? <Square size={14} /> : <Play size={14} />}
-          {demoRunning ? "Stop Demo" : "Run Demo"}
-        </button>
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-brand-200 backdrop-blur">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-400" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              National supply intelligence
+            </div>
+            <h1 className="mt-4 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight sm:text-4xl">
+              National PHC <span className="text-gradient">Dashboard</span>
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-slate-300">
+              Real-time supply intelligence across {phcs.length} primary health centres
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1 text-rose-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> {criticalCount} critical
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-3 py-1 text-amber-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> {warningCount} warning
+              </span>
+            </div>
+          </div>
+          <button
+            id="demo-mode-btn"
+            onClick={demoRunning ? stopDemo : runDemo}
+            className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-5 py-3 text-sm font-semibold shadow-lg transition-all ${
+              demoRunning
+                ? "border border-rose-300/40 bg-rose-500/20 text-rose-100 hover:bg-rose-500/30"
+                : "bg-gradient-to-r from-gold-400 to-gold-500 text-slate-900 shadow-gold-500/30 hover:-translate-y-0.5 hover:from-gold-300 hover:to-gold-400"
+            }`}
+          >
+            {demoRunning ? <Square size={15} /> : <Play size={15} />}
+            {demoRunning ? "Stop Demo" : "Run Demo"}
+          </button>
+        </div>
       </div>
 
       {/* Critical Stockout Countdown Clocks */}
@@ -443,9 +510,9 @@ export default function Dashboard() {
       )}
 
       {/* Crisis Simulator Panel */}
-      <div className={`border rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 ${
-        activeCrises.length > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"
-      }`}>
+      <div id="crisis-simulator" className={`border rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 transition-all duration-500 ${
+        simFlash ? "ring-2 ring-gold-400 shadow-glow " : ""
+      }${activeCrises.length > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
         <div className="space-y-1">
           <div className="font-semibold text-slate-800 flex items-center gap-1.5">
             <FlaskConical size={16} /> {t("crisisSimulator")}
@@ -523,16 +590,20 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div id="stat-cards" className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard label={t("totalPhcs")} value={phcs.length} />
-        <StatCard label={t("criticalAlerts")} value={criticalCount} tone="critical" />
-        <StatCard label={t("warningAlerts")} value={warningCount} tone="warning" />
-        <StatCard label={t("avgBedOccupancy")} value={`${avgBeds}%`} />
-        <StatCard label={t("avgAttendance")} value={`${avgAttendance}%`} tone="good" />
+      <div id="stat-cards" className="stagger grid grid-cols-2 gap-3 md:grid-cols-5">
+        <StatCard label={t("totalPhcs")} value={phcs.length} icon={Building2} />
+        <StatCard label={t("criticalAlerts")} value={criticalCount} tone="critical" icon={AlertTriangle} pulse={criticalCount > 0} />
+        <StatCard label={t("warningAlerts")} value={warningCount} tone="warning" icon={BellRing} />
+        <StatCard label={t("avgBedOccupancy")} value={`${avgBeds}%`} icon={BedDouble} />
+        <StatCard label={t("avgAttendance")} value={`${avgAttendance}%`} tone="good" icon={UserCheck} />
       </div>
 
+      <LiveSignalsPanel onLoadIntoSimulator={loadSignalIntoSimulator} />
+
+      <WeatherImpactPanel applied={weatherAdjusted} onApply={setWeatherAdjusted} intensity={weatherIntensity} onIntensity={setWeatherIntensity} />
+
       {/* SDG 3.8 Impact Dashboard */}
-      <div className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 border border-brand-800/50 rounded-xl p-5 text-white shadow-lg">
+      <div id="sdg-panel" className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 border border-brand-800/50 rounded-xl p-5 text-white shadow-lg">
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="font-bold text-brand-300 text-base flex items-center gap-2">
@@ -553,22 +624,22 @@ export default function Dashboard() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-            <div className="text-2xl font-black text-rose-300">{sdgMetrics.criticalPhcs}</div>
+            <div className="text-2xl font-black text-rose-300"><CountUp value={sdgMetrics.criticalPhcs} /></div>
             <div className="text-xs text-slate-400 mt-1">Facilities at critical risk</div>
           </div>
           <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-            <div className="text-2xl font-black text-orange-300">{sdgMetrics.patientsAtRisk.toLocaleString()}</div>
+            <div className="text-2xl font-black text-orange-300"><CountUp value={sdgMetrics.patientsAtRisk} thousands /></div>
             <div className="text-xs text-slate-400 mt-1">Patients potentially at risk</div>
             <div className="text-[9px] text-slate-600 mt-0.5">Est. ~2,000 per critical PHC</div>
           </div>
           <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-            <div className="text-2xl font-black text-amber-300">{sdgMetrics.stockoutDaysPrevented}</div>
+            <div className="text-2xl font-black text-amber-300"><CountUp value={sdgMetrics.stockoutDaysPrevented} /></div>
             <div className="text-xs text-slate-400 mt-1">Stockout-days preventable</div>
             <div className="text-[9px] text-slate-600 mt-0.5">Via pending transfer recommendations</div>
           </div>
           <div className="bg-white/5 rounded-xl p-3 border border-white/5">
             <div className="flex items-baseline gap-1 mb-2">
-              <div className="text-2xl font-black text-brand-300">{sdgMetrics.coverageScore}%</div>
+              <div className="text-2xl font-black text-brand-300"><CountUp value={`${sdgMetrics.coverageScore}%`} /></div>
             </div>
             <div className="w-full bg-white/10 rounded-full h-1.5">
               <div
@@ -583,10 +654,10 @@ export default function Dashboard() {
 
       {/* Map + State List (pass recs for transfer arrows) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div id="national-map" className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-2 h-[440px]">
+        <div id="national-map" className="lg:col-span-2 card p-2 h-[440px]">
           <IndiaMap phcs={phcs} riskByPhc={riskByPhc} recs={recs} />
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 h-[440px] overflow-y-auto">
+        <div id="state-list" className="card p-4 h-[440px] overflow-y-auto">
           <div className="text-sm font-semibold text-slate-700 mb-3">{t("states")}</div>
           <div className="space-y-1">
             {stateStats.map((s) => (
@@ -613,13 +684,20 @@ export default function Dashboard() {
 
       {/* Alerts + Redistribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <div className="text-sm font-semibold text-slate-700 mb-1">{t("stockoutAlerts")}</div>
+        <div id="alerts-panel" className="card p-4">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <div className="text-sm font-semibold text-slate-700">{t("stockoutAlerts")}</div>
+            {weatherAdjusted && (
+              <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${scenarioError ? "bg-amber-50 text-amber-700" : "bg-violet-50 text-violet-700"}`}>
+                {scenarioError ? t("impact.chip.unavailable") : t("impact.chip.scenario", { n: weatherIntensity.toFixed(2) })}
+              </span>
+            )}
+          </div>
           <AlertsList alerts={alerts} />
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div id="redistribution-panel" className="card p-4">
           <div className="flex items-center justify-between mb-1">
-            <div className="text-sm font-semibold text-slate-700">{t("redistributionRecs")}</div>
+            <div className="text-sm font-semibold text-slate-700">{t("redistributionRecs")}{weatherAdjusted && !scenarioError && <span className="ml-2 rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">{t("impact.chip.planned", { n: weatherIntensity.toFixed(2) })}</span>}</div>
             <div className="flex items-center gap-1 text-[10px] text-slate-400 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded font-medium text-violet-600">
               <Brain size={11} /> AI explanations available
             </div>
@@ -630,7 +708,7 @@ export default function Dashboard() {
 
       {/* Consumption anomalies + capacity (beds/staff) redistribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div id="anomaly-panel" className="card p-4">
           <div className="flex items-center justify-between mb-1">
             <div>
               <div className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
@@ -646,7 +724,7 @@ export default function Dashboard() {
           </div>
           <AnomalyList anomalies={anomalies} />
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div className="card p-4">
           <div className="mb-1">
             <div className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
               <Building2 size={14} /> {t("capacityRedistribution")}
@@ -658,7 +736,7 @@ export default function Dashboard() {
       </div>
 
       {/* Medicines panel */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-semibold text-slate-700">Medicines</div>
           <div className="text-xs text-slate-500">Reference priorities from backend</div>

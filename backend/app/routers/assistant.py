@@ -1,7 +1,10 @@
+import json
+
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.services import auth, db, forecasting, redistribution, genai
+from app.services import auth, db, forecasting, live_data, redistribution, genai
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
@@ -48,6 +51,13 @@ def _build_context(state: str | None) -> str:
             f"- Move {r['quantity']} {r['unit']} of {r['medicine']} from {r['from_phc_name']} "
             f"({r['from_state']}) to {r['to_phc_name']} ({r['to_state']}), {r['distance_km']} km"
         )
+    # Real weather (Open-Meteo), so questions like "should Bihar prepare for
+    # floods?" are answered from an actual forecast. Best effort: omitted when
+    # the feed is unavailable.
+    weather = live_data.weather_context_lines(state)
+    if weather:
+        lines.append("Real weather forecast by state (Open-Meteo, next 7 days):")
+        lines.extend(weather)
     return "\n".join(lines)
 
 
@@ -99,18 +109,44 @@ def execute_action(action: dict, user: dict | None = None) -> str:
     return ""
 
 
-@router.post("/chat")
-def chat(req: ChatRequest, user: dict | None = Depends(auth.get_current_user_optional)):
-    # Parse and execute action if present
+def _prepare(req: ChatRequest, user: dict | None) -> tuple[str, str]:
+    """Run any action the message asks for; return (action feedback, data context)."""
     action = genai.parse_chat_action(req.query)
     feedback = ""
     if action and action.get("action") != "none":
         feedback = execute_action(action, user)
+    return feedback, _build_context(req.state)
 
-    context = _build_context(req.state)
+
+@router.post("/chat")
+def chat(req: ChatRequest, user: dict | None = Depends(auth.get_current_user_optional)):
+    feedback, context = _prepare(req, user)
     reply = genai.chat_reply(req.query, context, req.lang)
-    
+
     if feedback:
         reply = f"{feedback}\n\n{reply}"
-        
+
     return {"reply": reply}
+
+
+def _sse(payload: dict) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+@router.post("/chat/stream")
+def chat_stream(req: ChatRequest, user: dict | None = Depends(auth.get_current_user_optional)):
+    """Same as /chat but streamed as server-sent events: ``{"delta": "..."}``
+    chunks, then ``{"done": true}``. Any action feedback is sent first."""
+    feedback, context = _prepare(req, user)
+
+    def events():
+        if feedback:
+            yield _sse({"delta": f"{feedback}\n\n"})
+        try:
+            for chunk in genai.chat_reply_stream(req.query, context, req.lang):
+                yield _sse({"delta": chunk})
+        except Exception:
+            yield _sse({"error": "The assistant could not finish this answer."})
+        yield _sse({"done": True})
+
+    return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

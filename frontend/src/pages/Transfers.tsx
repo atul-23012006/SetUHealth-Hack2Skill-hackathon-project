@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Truck, FileText, RefreshCw, Receipt } from "lucide-react";
 import { api } from "../lib/api";
+import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
 import type { Transfer, AuditEvent } from "../lib/types";
 
@@ -43,13 +44,13 @@ export default function Transfers() {
     }
   };
 
-  if (loading) return <div className="text-center text-slate-400 py-20">{t("loading")}</div>;
+  if (loading) return <PageLoader label={t("loading")} />;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div id="transfers-header" className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t("transferManifests")}</h1>
+          <h1 className="page-title">{t("transferManifests")}</h1>
           <p className="text-sm text-slate-500 mt-1">
             Tracking cross-district and cross-facility stock distributions executed across the grid.
           </p>
@@ -63,6 +64,7 @@ export default function Transfers() {
             <FileText size={13} /> FHIR R4 export available per transfer
           </div>
           <button
+            id="transfers-refresh"
             onClick={fetchTransfers}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50 cursor-pointer"
           >
@@ -71,7 +73,7 @@ export default function Transfers() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div id="transfers-table" className="card overflow-hidden">
         {transfers.length === 0 ? (
           <div className="text-center py-16 text-slate-400 text-sm">
             No transfer manifests have been executed yet. Click "Execute" in the dashboard redistribution panel to log a manifest.
@@ -152,7 +154,7 @@ export default function Transfers() {
       </div>
 
       {/* SQLite-backed audit trail — every transfer, crisis and reset */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div id="audit-trail" className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Snowflake } from "lucide-react";
 import { api } from "../lib/api";
+import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
 import type { PHCDetail as PHCDetailType, Forecast } from "../lib/types";
 import RiskBadge from "../components/RiskBadge";
@@ -101,20 +102,20 @@ export default function MedicineStateDetail() {
   }, [selectedForecast]);
 
   if (!medicine || !state) return <div className="text-center text-slate-400 py-20">Invalid medicine or state</div>;
-  if (loading) return <div className="text-center text-slate-400 py-20">{t("loading")}</div>;
+  if (loading) return <PageLoader label={t("loading")} />;
 
   return (
     <div className="space-y-6">
-      <div>
+      <div id="med-header">
         <Link to="/" className="text-sm text-brand-600 hover:underline">
           ← {t("dashboard")}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900 mt-1">{medicine} — {state}</h1>
+        <h1 className="page-title mt-1">{medicine} — {state}</h1>
         <div className="text-slate-500 text-sm">Aggregated statistics and PHC drilldowns for this medicine in the selected state</div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-4 overflow-y-auto max-h-[600px]">
+        <div id="med-phc-list" className="lg:col-span-1 card p-4 overflow-y-auto max-h-[600px]">
           <div className="text-sm font-semibold text-slate-700 mb-2">PHCs ({listItems.length})</div>
           <div className="divide-y divide-slate-100">
             {listItems.map((it) => (
@@ -138,7 +139,7 @@ export default function MedicineStateDetail() {
           </div>
         </div>
 
-        <div className="lg:col-span-2">
+        <div id="med-detail" className="lg:col-span-2">
           {selectedPhcDetail ? (
             <>
               <div className="space-y-6">
@@ -156,7 +157,7 @@ export default function MedicineStateDetail() {
                   ))}
                 </div>
 
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                <div className="card p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm font-semibold text-slate-700">Stock Levels ({medicine})</div>
                   </div>
@@ -195,7 +196,7 @@ export default function MedicineStateDetail() {
                 </div>
 
                 {forecastChartData.length > 0 && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                  <div className="card p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="text-sm font-semibold text-slate-700">Forecast</div>
                       {selectedForecast?.forecast_method && (
@@ -219,7 +220,7 @@ export default function MedicineStateDetail() {
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                  <div className="card p-4">
                     <div className="text-sm font-semibold text-slate-700 mb-2">Bed Occupancy</div>
                     <ResponsiveContainer width="100%" height={180}>
                       <LineChart data={bedChartData}>
@@ -232,7 +233,7 @@ export default function MedicineStateDetail() {
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                  <div className="card p-4">
                     <div className="text-sm font-semibold text-slate-700 mb-2">Staff Attendance</div>
                     <ResponsiveContainer width="100%" height={180}>
                       <LineChart data={attendanceChartData}>
@@ -248,7 +249,7 @@ export default function MedicineStateDetail() {
               </div>
             </>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 text-sm text-slate-500">Select a PHC on the left to view detailed stats.</div>
+            <div className="card p-4 text-sm text-slate-500">Select a PHC on the left to view detailed stats.</div>
           )}
         </div>
       </div>

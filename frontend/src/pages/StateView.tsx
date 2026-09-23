@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
+import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
 import type { PHC, Forecast, RedistributionRec } from "../lib/types";
 import AlertsList from "../components/AlertsList";
@@ -27,18 +28,18 @@ export default function StateView() {
     });
   }, [state]);
 
-  if (loading) return <div className="text-center text-slate-400 py-20">{t("loading")}</div>;
+  if (loading) return <PageLoader label={t("loading")} />;
 
   return (
     <div className="space-y-6">
-      <div>
+      <div id="state-header">
         <Link to="/" className="text-sm text-brand-600 hover:underline">
           ← {t("dashboard")}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900 mt-1">{state}</h1>
+        <h1 className="page-title mt-1">{state}</h1>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div id="state-phc-table" className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
             <tr>
@@ -68,11 +69,11 @@ export default function StateView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div id="state-alerts" className="card p-4">
           <div className="text-sm font-semibold text-slate-700 mb-1">{t("stockoutAlerts")}</div>
           <AlertsList alerts={alerts} />
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div id="state-redistribution" className="card p-4">
           <div className="text-sm font-semibold text-slate-700 mb-1">{t("redistributionRecs")}</div>
           <RedistributionList recs={recs} medicines={medicines} />
         </div>

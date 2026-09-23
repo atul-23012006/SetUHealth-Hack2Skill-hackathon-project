@@ -22,5 +22,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests aren't part of the production build (`tsc -b`); they have their own
+  // tsconfig (tsconfig.vitest.json) so vitest/testing-library types don't leak
+  // into the app build, and a test type error never blocks `npm run build`.
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**"]
 }

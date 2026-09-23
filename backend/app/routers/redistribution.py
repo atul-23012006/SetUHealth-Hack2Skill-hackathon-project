@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
-from app.services import redistribution, genai, forecasting
+from app.services import redistribution, genai, forecasting, live_data, weather_impact
 
 router = APIRouter(prefix="/api/redistribution", tags=["redistribution"])
 
@@ -10,10 +10,18 @@ def get_recommendations(
     state: str | None = None,
     explain: bool = Query(False, description="Pre-load AI explanations for top critical/warning recs"),
     lang: str = Query("en", description="Language code for AI explanations (en, hi, mr, ta)"),
+    weather_adjusted: bool = Query(False, description="Plan against the real weather outlook as a demand scenario"),
+    intensity: float = Query(1.0, ge=0.0, le=2.0),
 ):
     """Return redistribution recommendations. Pass explain=true to pre-load AI explanations
     for the top 8 critical/warning transfers (adds ~1-2 seconds for Gemini round-trips)."""
-    recs = redistribution.recommend_all(state)
+    if weather_adjusted:
+        try:
+            recs = weather_impact.recommendations(state, intensity)
+        except live_data.LiveDataError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+    else:
+        recs = redistribution.recommend_all(state)
     if explain:
         recs = redistribution.enrich_with_explanations(recs, lang=lang)
     return recs

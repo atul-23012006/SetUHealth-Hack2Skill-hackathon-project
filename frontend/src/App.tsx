@@ -1,15 +1,19 @@
+import { lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import PublicLayout from "./components/PublicLayout";
-import Dashboard from "./pages/Dashboard";
-import StateView from "./pages/StateView";
-import PHCDetail from "./pages/PHCDetail";
-import MedicineStateDetail from "./pages/MedicineStateDetail";
-import Federated from "./pages/Federated";
-import Assistant from "./pages/Assistant";
-import Transfers from "./pages/Transfers";
-import PublicPortal from "./pages/PublicPortal";
-import PublicStateDetail from "./pages/PublicStateDetail";
+// Route-level code splitting: each page (and the heavy libraries only it uses:
+// charts, Leaflet, Three.js) loads on first visit instead of in the entry bundle.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const StateView = lazy(() => import("./pages/StateView"));
+const PHCDetail = lazy(() => import("./pages/PHCDetail"));
+const MedicineStateDetail = lazy(() => import("./pages/MedicineStateDetail"));
+const Federated = lazy(() => import("./pages/Federated"));
+const Assistant = lazy(() => import("./pages/Assistant"));
+const Transfers = lazy(() => import("./pages/Transfers"));
+const Explore = lazy(() => import("./pages/Explore"));
+const PublicPortal = lazy(() => import("./pages/PublicPortal"));
+const PublicStateDetail = lazy(() => import("./pages/PublicStateDetail"));
 import { LangProvider } from "./lib/LangContext";
 import { AuthProvider } from "./lib/AuthContext";
 
@@ -24,6 +28,7 @@ export default function App() {
               <Route path="states/:state" element={<StateView />} />
               <Route path="phcs/:id" element={<PHCDetail />} />
               <Route path="medicines/:medicine/states/:state" element={<MedicineStateDetail />} />
+              <Route path="explore" element={<Explore />} />
               <Route path="federated" element={<Federated />} />
               <Route path="transfers" element={<Transfers />} />
               <Route path="assistant" element={<Assistant />} />

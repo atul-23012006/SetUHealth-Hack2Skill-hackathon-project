@@ -61,6 +61,11 @@ export interface Forecast {
   forecasted_daily_demand?: number[];
   temperature?: number;
   cold_chain_alert?: boolean;
+  // Present only on forecasts returned from a weather scenario (?weather_adjusted=true).
+  weather_adjusted?: boolean;
+  weather_factor?: number;
+  baseline_days_to_stockout?: number | null;
+  baseline_risk?: Risk;
 }
 
 export interface RedistributionRec {
@@ -254,3 +259,199 @@ export interface PublicNationalSummary {
   last_updated: string;
 }
 
+// ---- Real-world data (backend /api/live/*). Everything here comes from public
+// APIs at request time, except NetworkFacility, which is the synthetic demo network.
+
+export type SignalLevel = "normal" | "elevated" | "high";
+
+export interface WeatherSignal {
+  id: "flood" | "vector" | "heat";
+  label: string;
+  level: SignalLevel;
+  reason: string;
+  suggested_crisis: string | null;
+}
+
+export interface WeatherReading {
+  lat: number;
+  lon: number;
+  current: {
+    temperature_c: number | null;
+    apparent_temperature_c: number | null;
+    humidity_pct: number | null;
+    precipitation_mm: number | null;
+    wind_kmh: number | null;
+    observed_at: string | null;
+  };
+  daily: { date: string; rain_mm: number | null; temp_max_c: number | null; temp_min_c: number | null }[];
+  rain_7d_mm: number;
+  signals: WeatherSignal[];
+  level: SignalLevel;
+}
+
+export interface StateWeather extends WeatherReading {
+  state: string;
+}
+
+export interface StateWeatherResponse {
+  source: string;
+  fetched_at: string;
+  stale: boolean;
+  states: StateWeather[];
+}
+
+export interface PlaceSnapshot {
+  source: string;
+  fetched_at: string;
+  stale: boolean;
+  point: { lat: number; lon: number };
+  weather: WeatherReading;
+  air: { us_aqi: number | null; pm2_5: number | null; pm10: number | null; category: string | null; observed_at: string | null } | null;
+}
+
+export interface GeocodeResult {
+  name: string;
+  admin1: string | null;
+  admin2: string | null;
+  country: string | null;
+  lat: number;
+  lon: number;
+  population: number | null;
+}
+
+export interface BenchmarkIndicator {
+  id: string;
+  label: string;
+  unit: string;
+  higher_is_better: boolean;
+}
+
+export interface BenchmarkCatalog {
+  source: string;
+  indicators: BenchmarkIndicator[];
+  countries: { iso3: string; name: string }[];
+}
+
+export interface BenchmarkCountry {
+  iso3: string;
+  name: string;
+  series: { year: number; value: number }[];
+  latest: { year: number; value: number } | null;
+}
+
+export interface BenchmarkResponse {
+  source: string;
+  source_url: string;
+  fetched_at: string;
+  stale: boolean;
+  indicator: BenchmarkIndicator;
+  countries: BenchmarkCountry[];
+}
+
+export interface OsmFacility {
+  osm_id: string;
+  name: string;
+  kind: string;
+  operator: string | null;
+  lat: number;
+  lon: number;
+  distance_km: number;
+  osm_url: string;
+}
+
+export interface OsmFacilitiesResponse {
+  source: string;
+  fetched_at: string;
+  stale: boolean;
+  center: { lat: number; lon: number };
+  radius_km: number;
+  count: number;
+  facilities: OsmFacility[];
+}
+
+export interface NetworkFacility {
+  id: string;
+  name: string;
+  state: string;
+  district: string;
+  facility_type: string;
+  lat: number;
+  lon: number;
+  distance_km: number;
+  risk: Risk;
+  critical_items: number;
+  warning_items: number;
+  soonest_stockout_days: number | null;
+  synthetic: true;
+}
+
+export interface NetworkFacilitiesResponse {
+  source: string;
+  center: { lat: number; lon: number };
+  count: number;
+  facilities: NetworkFacility[];
+}
+
+export interface WeatherImpactItem {
+  phc_id: string;
+  phc_name: string;
+  state: string;
+  district: string;
+  medicine: string;
+  unit: string;
+  current_level: number;
+  factor: number;
+  causes: { signal: string; level: string; label: string }[];
+  days_before: number | null;
+  days_after: number | null;
+  risk_before: Risk;
+  risk_after: Risk;
+}
+
+export interface WeatherImpact {
+  source: string;
+  fetched_at: string;
+  stale: boolean;
+  intensity: number;
+  disclaimer: string;
+  assumptions: { signal: string; medicine: string; elevated: number; high: number; why: string }[];
+  states: { state: string; level: SignalLevel; active_signals: string[]; medicines_affected: string[]; pairs_affected: number; pairs_worsened: number; new_critical: number }[];
+  totals: { pairs_affected: number; pairs_worsened: number; new_critical: number; cold_chain_items_exposed_to_heat: number };
+  items: WeatherImpactItem[];
+}
+
+export interface AppNotification {
+  id: number;
+  ts: string;
+  kind: string;
+  title: string;
+  body: string;
+  state: string | null;
+  signal: string | null;
+  level: string | null;
+  delivery: string | null;
+  read: boolean;
+}
+
+export interface NotificationConfig {
+  polling_enabled: boolean;
+  poll_minutes: number;
+  webhook_configured: boolean;
+}
+
+export interface FacilityCountBenchmarkRow {
+  state: string;
+  official: { sub_centres: number | null; phcs: number | null; chcs: number | null };
+  network_facility_count: number | null;
+  network_vs_official_phcs_pct: number | null;
+}
+
+export interface FacilityCountBenchmark {
+  source: string;
+  source_url: string;
+  as_of: string;
+  fetched_at: string;
+  disclaimer: string;
+  stale: boolean;
+  states: FacilityCountBenchmarkRow[];
+}

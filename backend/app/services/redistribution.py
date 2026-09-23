@@ -19,8 +19,10 @@ MAX_DONOR_LOAD = 2.0  # a facility may donate at most this many "full medicines'
 # recommended to donate in one pass — see _apply_cross_medicine_donor_cap
 
 
-def recommend_for_medicine(medicine: str) -> list[dict]:
-    forecasts = [f for f in forecast_all() if f["medicine"] == medicine]
+def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -> list[dict]:
+    """``forecasts`` lets a caller supply an alternative forecast set (e.g. the
+    weather scenario in ``weather_impact``); by default the live forecasts are used."""
+    forecasts = [f for f in (forecasts if forecasts is not None else forecast_all()) if f["medicine"] == medicine]
     deficits = [f for f in forecasts if f["risk"] in ("critical", "warning") and not f.get("cold_chain_alert")]
     surplus = []
     
@@ -321,12 +323,12 @@ def _apply_cross_medicine_donor_cap(recs: list[dict]) -> list[dict]:
     return [r for r in recs if id(r) not in dropped]
 
 
-def recommend_all(state: str | None = None) -> list[dict]:
+def recommend_all(state: str | None = None, forecasts: list[dict] | None = None) -> list[dict]:
     out = []
     # Every tracked resource, not just medicines — adding a resource type to
     # the registry is enough for it to start being redistributed.
     for resource_key in store.resource_stock_keys():
-        out.extend(recommend_for_medicine(resource_key))
+        out.extend(recommend_for_medicine(resource_key, forecasts))
     out = _apply_cross_medicine_donor_cap(out)
     if state:
         out = [r for r in out if r["from_state"] == state or r["to_state"] == state]

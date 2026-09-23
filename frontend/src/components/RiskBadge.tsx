@@ -7,11 +7,21 @@ const styles: Record<Risk, string> = {
   low: "bg-emerald-100 text-emerald-700 border-emerald-200",
 };
 
+const dots: Record<Risk, string> = {
+  critical: "bg-rose-500",
+  warning: "bg-amber-500",
+  low: "bg-emerald-500",
+};
+
 export default function RiskBadge({ risk }: { risk: Risk }) {
   const { t } = useLang();
   const label = risk === "critical" ? t("critical") : risk === "warning" ? t("warning") : t("low");
   return (
-    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold border ${styles[risk]}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border ${styles[risk]}`}>
+      <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+        {risk === "critical" && <span className={`absolute inline-flex h-full w-full animate-ping-soft rounded-full ${dots[risk]}`} />}
+        <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dots[risk]}`} />
+      </span>
       {label}
     </span>
   );

@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Mic } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Mic, Square } from "lucide-react";
 import { useLang } from "../lib/LangContext";
 import { LANGUAGES } from "../lib/i18n";
 import { api } from "../lib/api";
@@ -33,22 +33,50 @@ export default function AssistantWidget({ state }: { state?: string }) {
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Keep the newest text in view while a reply streams in; abort on unmount.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages]);
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const speechSupported = !!getSpeechRecognition();
   const speechLang = LANGUAGES.find((l) => l.code === lang)?.speechCode ?? "en-IN";
 
   const send = async (text: string) => {
     const query = text.trim();
-    if (!query) return;
-    setMessages((m) => [...m, { role: "user", text: query }]);
+    if (!query || sending) return;
+    setMessages((m) => [...m, { role: "user", text: query }, { role: "assistant", text: "" }]);
     setInput("");
     setSending(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const setReply = (fn: (prev: string) => string) =>
+      setMessages((m) => m.map((msg, i) => (i === m.length - 1 ? { ...msg, text: fn(msg.text) } : msg)));
+    let received = "";
     try {
-      const reply = await api.chat(query, lang, state);
-      setMessages((m) => [...m, { role: "assistant", text: reply }]);
-      speak(reply);
+      await api.chatStream(query, lang, state, (delta) => {
+        received += delta;
+        setReply((prev) => prev + delta);
+      }, controller.signal);
+      speak(received);
+    } catch {
+      if (controller.signal.aborted) return; // the operator pressed Stop; keep what has arrived
+      if (received === "") {
+        // Streaming failed before any text (e.g. a proxy that buffers): fall back to the one-shot endpoint.
+        try {
+          const reply = await api.chat(query, lang, state);
+          setReply(() => reply);
+          speak(reply);
+        } catch {
+          setReply(() => "Sorry, I couldn't get an answer. Please try again.");
+        }
+      }
     } finally {
       setSending(false);
+      abortRef.current = null;
     }
   };
 
@@ -84,8 +112,8 @@ export default function AssistantWidget({ state }: { state?: string }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[520px]">
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+    <div id="assistant-chat" className="card flex flex-col h-[520px]">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
           <div className="text-sm text-slate-400 text-center mt-10">{t("askAssistant")}</div>
         )}
@@ -96,14 +124,20 @@ export default function AssistantWidget({ state }: { state?: string }) {
                 m.role === "user" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-800"
               }`}
             >
-              {m.text}
+              {m.text || (sending && i === messages.length - 1 ? (
+                <span className="inline-flex items-center gap-1 py-1" aria-label="Assistant is typing">
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:120ms]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:240ms]" />
+                </span>
+              ) : null)}
             </div>
           </div>
         ))}
-        {sending && <div className="text-xs text-slate-400">…</div>}
       </div>
       <div className="border-t border-slate-200 p-3 flex items-center gap-2">
         <input
+          id="assistant-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send(input)}
@@ -112,6 +146,7 @@ export default function AssistantWidget({ state }: { state?: string }) {
         />
         {speechSupported && (
           <button
+            id="assistant-mic"
             onClick={toggleListen}
             className={`px-3 py-2 rounded-md text-sm border ${
               listening ? "bg-rose-600 text-white border-rose-600" : "border-slate-300 text-slate-600 hover:bg-slate-50"
@@ -121,12 +156,22 @@ export default function AssistantWidget({ state }: { state?: string }) {
             {listening ? t("listening") : <Mic size={16} />}
           </button>
         )}
-        <button
-          onClick={() => send(input)}
-          className="px-3 py-2 rounded-md text-sm bg-brand-600 text-white hover:bg-brand-700"
-        >
-          {t("send")}
-        </button>
+        {sending ? (
+          <button
+            onClick={() => abortRef.current?.abort()}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm bg-slate-800 text-white hover:bg-slate-700"
+            aria-label="Stop generating"
+          >
+            <Square size={13} aria-hidden="true" /> Stop
+          </button>
+        ) : (
+          <button
+            onClick={() => send(input)}
+            className="px-3 py-2 rounded-md text-sm bg-brand-600 text-white hover:bg-brand-700"
+          >
+            {t("send")}
+          </button>
+        )}
       </div>
     </div>
   );

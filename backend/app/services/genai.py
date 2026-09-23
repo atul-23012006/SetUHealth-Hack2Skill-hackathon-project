@@ -4,20 +4,35 @@ mock when no GEMINI_API_KEY is configured, so the whole app is demoable
 before a key is issued - swapping in a real key requires no code changes.
 """
 import logging
+import time
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-_MODEL_NAME = "gemini-3.6-flash"
+_MODELS = [m for m in (settings.gemini_model, settings.gemini_fallback_model) if m]
 _client_ready = False
+_client = None
+_GEN_CONFIG = None
 
 if settings.gemini_api_key:
     try:
-        import google.generativeai as genai
+        # `google-genai` (the maintained SDK; the old `google-generativeai` is deprecated).
+        from google import genai
+        from google.genai import types
 
-        genai.configure(api_key=settings.gemini_api_key)
-        _model = genai.GenerativeModel(_MODEL_NAME)
+        _client = genai.Client(
+            api_key=settings.gemini_api_key,
+            # One attempt per call and a hard timeout: the SDK's own retry loop
+            # otherwise stalls a request for a minute or more during an outage.
+            # Retrying and failing over is handled below, where it can be quick.
+            http_options=types.HttpOptions(timeout=10_000, retry_options=types.HttpRetryOptions(attempts=1)),
+        )
+        # Plain text generation only: no tool calling, so no "automatic function
+        # calling" notice on every request.
+        _GEN_CONFIG = types.GenerateContentConfig(
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+        )
         _client_ready = True
     except Exception:
         _client_ready = False
@@ -26,20 +41,107 @@ if settings.gemini_api_key:
 LANG_NAMES = {"en": "English", "hi": "Hindi", "mr": "Marathi", "ta": "Tamil"}
 
 
-def _generate(prompt: str) -> str | None:
-    if _client_ready:
+# Google sheds load per model with 429/5xx (and 504 when a model stalls). A 503
+# or 429 often clears within a second, so it gets one short retry; a timeout
+# does not (waiting again would only double the delay). Either way we then fail
+# over to the next configured model before giving up on the live API.
+_TRANSIENT_CODES = {429, 500, 502, 503, 504}
+_RETRY_ONCE_CODES = {429, 503}
+
+
+def _code(exc: Exception):
+    return getattr(exc, "code", None) or getattr(exc, "status_code", None)
+
+
+def _is_transient(exc: Exception) -> bool:
+    return _code(exc) in _TRANSIENT_CODES
+
+
+# Circuit breaker: a model that just failed is skipped for a while, so only the
+# first request after an outage pays the timeout instead of every request.
+_COOLDOWN_S = 90.0
+_down_until: dict[str, float] = {}
+
+
+def _candidate_models() -> list[str]:
+    now = time.monotonic()
+    healthy = [m for m in _MODELS if _down_until.get(m, 0.0) <= now]
+    return healthy or list(_MODELS)  # if everything is marked down, still try them all
+
+
+def _call_models(call):
+    """Run ``call(model)`` down the healthy models; returns the first result, or
+    raises the last exception when every model failed."""
+    last: Exception | None = None
+    candidates = _candidate_models()
+    for model in candidates:
+        for attempt in range(2):
+            try:
+                result = call(model)
+                _down_until.pop(model, None)
+                return result
+            except Exception as exc:
+                last = exc
+                if _code(exc) in _RETRY_ONCE_CODES and attempt == 0:
+                    time.sleep(0.8)
+                    continue
+                break  # next model
+        _down_until[model] = time.monotonic() + _COOLDOWN_S
+        logger.warning("Gemini model %s failed (%s)%s", model, type(last).__name__, ", trying the next model" if model != candidates[-1] else "")
+    raise last if last else RuntimeError("no Gemini model configured")
+
+
+def _generate_stream(prompt: str):
+    """Yield text chunks from Gemini as they arrive; None when there is no live
+    client or every model failed to start (callers then use the fallback text).
+    A failure mid-stream just ends the stream, since the reader already has the
+    earlier chunks."""
+    if not _client_ready:
+        return None
+
+    def open_stream(model):
+        stream = _client.models.generate_content_stream(model=model, contents=prompt, config=_GEN_CONFIG)
+        first = next((c.text for c in stream if c.text), None)
+        if first is None:
+            raise ValueError("empty stream")
+        return stream, first
+
+    try:
+        stream, first = _call_models(open_stream)
+    except Exception:
+        return None
+
+    def chunks():
+        yield first
         try:
-            response = _model.generate_content(prompt)
-            return response.text.strip()
+            for c in stream:
+                if c.text:
+                    yield c.text
         except Exception:
-            # Network/quota/model errors: log the real cause server-side, but
-            # never surface raw API error text as if it were a generated
-            # answer - fall through to the deterministic mock templates below,
-            # same as the no-API-key path, so the UI degrades cleanly instead
-            # of showing a stack-trace-looking string to a health worker.
-            logger.warning("Gemini generation failed, falling back to mock", exc_info=True)
-            return None
-    return None
+            logger.warning("Gemini stream ended early", exc_info=True)
+
+    return chunks()
+
+
+def _generate(prompt: str) -> str | None:
+    if not _client_ready:
+        return None
+
+    def once(model):
+        response = _client.models.generate_content(model=model, contents=prompt, config=_GEN_CONFIG)
+        text = (response.text or "").strip()
+        if not text:
+            raise ValueError("empty response")
+        return text
+
+    try:
+        return _call_models(once)
+    except Exception:
+        # Network/quota/model errors are logged server-side, but raw API error
+        # text is never surfaced as if it were a generated answer: callers fall
+        # through to deterministic templates, same as the no-API-key path, so a
+        # health worker never sees a stack-trace-looking string.
+        return None
 
 
 def explain_alert(alert: dict, lang: str = "en") -> str:
@@ -86,9 +188,17 @@ def explain_alert(alert: dict, lang: str = "en") -> str:
     return templates.get(lang, templates["en"])
 
 
-def chat_reply(query: str, context_summary: str, lang: str = "en") -> str:
+_OFFLINE_INTRO = {
+    "en": "(Offline demo mode - connect a Gemini API key for live answers.) Based on current data:\n",
+    "hi": "(ऑफलाइन डेमो मोड - लाइव उत्तरों के लिए जेमिनी एपीआई की कनेक्ट करें।) वर्तमान डेटा के आधार पर:\n",
+    "mr": "(ऑफलाइन डेमो मोड - थेट उत्तरांसाठी जेमिनी एपीआई की कनेक्ट करा.) सध्याच्या माहितीच्या आधारे:\n",
+    "ta": "(ஆஃப்லைன் டெமோ பயன்முறை - நேரடி பதில்களுக்கு ஜெமினி ஏபிஐ விசையை இணைக்கவும்.) தற்போதைய தரவுகளின் அடிப்படையில்:\n",
+}
+
+
+def _chat_prompt(query: str, context_summary: str, lang: str) -> str:
     lang_name = LANG_NAMES.get(lang, "English")
-    prompt = (
+    return (
         f"You are 'Setu Assistant', a helpful assistant for health workers using a national "
         f"PHC (Primary Health Centre) resource management platform. Answer in {lang_name}, "
         f"briefly and concretely, using only the data context given. If the answer isn't in "
@@ -96,18 +206,40 @@ def chat_reply(query: str, context_summary: str, lang: str = "en") -> str:
         f"Data context:\n{context_summary}\n\n"
         f"Question: {query}"
     )
-    generated = _generate(prompt)
+
+
+# Shown instead when a key IS configured but Gemini could not answer just now.
+_UNAVAILABLE_INTRO = {
+    "en": "(Gemini is temporarily unavailable, so here is a data summary instead.) Based on current data:\n",
+    "hi": "(जेमिनी अभी अस्थायी रूप से उपलब्ध नहीं है, इसलिए यहाँ डेटा सारांश है।) वर्तमान डेटा के आधार पर:\n",
+    "mr": "(जेमिनी सध्या तात्पुरते उपलब्ध नाही, म्हणून येथे माहितीचा सारांश आहे.) सध्याच्या माहितीच्या आधारे:\n",
+    "ta": "(ஜெமினி தற்காலிகமாக கிடைக்கவில்லை, எனவே தரவு சுருக்கம் இங்கே.) தற்போதைய தரவுகளின் அடிப்படையில்:\n",
+}
+
+
+def _offline_reply(context_summary: str, lang: str) -> str:
+    intros = _UNAVAILABLE_INTRO if _client_ready else _OFFLINE_INTRO
+    return f"{intros.get(lang, intros['en'])}{context_summary[:400]}"
+
+
+def chat_reply(query: str, context_summary: str, lang: str = "en") -> str:
+    generated = _generate(_chat_prompt(query, context_summary, lang))
     if generated:
         return generated
+    return _offline_reply(context_summary, lang)
 
-    offline_msgs = {
-        "en": "(Offline demo mode - connect a Gemini API key for live answers.) Based on current data:\n",
-        "hi": "(ऑफलाइन डेमो मोड - लाइव उत्तरों के लिए जेमिनी एपीआई की कनेक्ट करें।) वर्तमान डेटा के आधार पर:\n",
-        "mr": "(ऑफलाइन डेमो मोड - थेट उत्तरांसाठी जेमिनी एपीआई की कनेक्ट करा.) सध्याच्या माहितीच्या आधारे:\n",
-        "ta": "(ஆஃப்லைன் டெமோ பயன்முறை - நேரடி பதில்களுக்கு ஜெமினி ஏபிஐ விசையை இணைக்கவும்.) தற்போதைய தரவுகளின் அடிப்படையில்:\n",
-    }
-    intro = offline_msgs.get(lang, offline_msgs["en"])
-    return f"{intro}{context_summary[:400]}"
+
+def chat_reply_stream(query: str, context_summary: str, lang: str = "en"):
+    """Yield the reply in chunks. Live Gemini streams token batches as they
+    arrive; the offline mock is streamed word by word so the UI behaves the same
+    either way."""
+    live = _generate_stream(_chat_prompt(query, context_summary, lang))
+    if live is not None:
+        yield from live
+        return
+    words = _offline_reply(context_summary, lang).split(" ")
+    for i, w in enumerate(words):
+        yield w if i == len(words) - 1 else w + " "
 
 
 def parse_chat_action(query: str) -> dict | None:
@@ -130,8 +262,9 @@ def parse_chat_action(query: str) -> dict | None:
                 "If no action is requested, return {\"action\": \"none\"}.\n\n"
                 f"Query: {query}"
             )
-            response = _model.generate_content(prompt)
-            text = response.text.strip()
+            text = (_generate(prompt) or "").strip()
+            if not text:
+                raise ValueError("empty model response")
             # Clean JSON markdown blocks if any
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()

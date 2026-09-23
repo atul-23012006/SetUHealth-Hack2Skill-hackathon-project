@@ -1,3 +1,4 @@
+import math
 import uuid
 from datetime import datetime, timezone
 
@@ -53,6 +54,12 @@ def create_and_execute_transfer(
 
     if not from_phc or not to_phc:
         raise ValueError("Invalid sender or recipient PHC ID")
+    if from_phc_id == to_phc_id:
+        raise ValueError("Sender and recipient must be different facilities")
+    # Checked before any mutation: the assistant passes whatever the model
+    # parsed (possibly None), and the router only guarantees a float.
+    if not isinstance(quantity, (int, float)) or not math.isfinite(quantity) or quantity <= 0:
+        raise ValueError("Transfer quantity must be a positive number")
 
     if medicine not in store.STOCK_HISTORY[from_phc_id]:
         raise ValueError(f"Medicine {medicine} not found at donor PHC")
@@ -62,6 +69,14 @@ def create_and_execute_transfer(
     # Access stock records
     donor_stock = store.STOCK_HISTORY[from_phc_id][medicine]
     recipient_stock = store.STOCK_HISTORY[to_phc_id][medicine]
+
+    # A donor can't send more than it holds; without this the clamp below
+    # would zero the donor while the recipient still gained the full amount.
+    donor_level = donor_stock["levels"][-1]
+    if quantity > donor_level:
+        raise ValueError(
+            f"Donor has only {donor_level} {donor_stock['unit']} of {medicine}; cannot transfer {quantity}"
+        )
 
     # Mutate current levels (the last element of levels timeline)
     donor_stock["levels"][-1] = round(max(0.0, donor_stock["levels"][-1] - quantity), 1)

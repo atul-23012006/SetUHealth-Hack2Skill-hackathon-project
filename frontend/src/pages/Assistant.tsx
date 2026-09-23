@@ -14,8 +14,8 @@ export default function Assistant() {
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">{t("assistant")}</h1>
+      <div id="assistant-header" className="flex items-center justify-between">
+        <h1 className="page-title">{t("assistant")}</h1>
         <select
           value={state}
           onChange={(e) => setState(e.target.value)}

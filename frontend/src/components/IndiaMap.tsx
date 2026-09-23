@@ -3,8 +3,9 @@
 // animated dashed Polyline arrows for redistribution recommendations. Above
 // CLUSTER_THRESHOLD facilities, markers are grouped into risk-coloured clusters
 // so the national view stays legible at low zoom.
-import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Polyline } from "react-leaflet";
+import { MapContainer, CircleMarker, Marker, Tooltip, Polyline } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
+import BaseTiles from "./BaseTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -36,7 +37,7 @@ function makeRiskIcon(risk: Risk): L.DivIcon {
   const borderWidth = risk === "critical" ? 2 : 1;
   return L.divIcon({
     className: "",
-    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${riskColor[risk]};border:${borderWidth}px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.15);"></div>`,
+    html: `<div class="${risk === "critical" ? "risk-pulse" : ""}" style="width:${size}px;height:${size}px;border-radius:50%;background:${riskColor[risk]};border:${borderWidth}px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.15);"></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
@@ -136,10 +137,7 @@ export default function IndiaMap({
       scrollWheelZoom={false}
       className="h-full w-full rounded-lg"
     >
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; OpenStreetMap &copy; CARTO'
-      />
+      <BaseTiles />
 
       {/* Transfer arrows — dashed Polylines from donor to recipient (never shown in read-only/public mode) */}
       {!readOnly && recs.map((r, i) => {
@@ -157,8 +155,9 @@ export default function IndiaMap({
             pathOptions={{
               color,
               weight: r.urgency === "critical" ? 2.5 : 1.8,
-              opacity: 0.75,
+              opacity: 0.85,
               dashArray: "7 5",
+              className: "transfer-arrow",
             }}
           >
             <Tooltip sticky>

@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { Snowflake, AlertTriangle } from "lucide-react";
 import { api } from "../lib/api";
+import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
 import type { PHCDetail as PHCDetailType, Forecast } from "../lib/types";
 import RiskBadge from "../components/RiskBadge";
@@ -67,20 +68,20 @@ export default function PHCDetail() {
     });
   }, [forecast]);
 
-  if (!phc) return <div className="text-center text-slate-400 py-20">{t("loading")}</div>;
+  if (!phc) return <PageLoader label={t("loading")} />;
   const reorder = medicine ? phc.stock[medicine].reorder_level : 0;
 
   return (
     <div className="space-y-6">
-      <div>
+      <div id="phc-header">
         <Link to={`/states/${encodeURIComponent(phc.state)}`} className="text-sm text-brand-600 hover:underline">
           ← {phc.state}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900 mt-1">{phc.name}</h1>
+        <h1 className="page-title mt-1">{phc.name}</h1>
         <div className="text-slate-500 text-sm">{phc.district}, {phc.state}</div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div id="phc-staff" className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
         {phc.staff.map((s) => (
           <div key={s.role} className="bg-white rounded-xl border border-slate-200 p-3">
             <div className="text-xs text-slate-500">{s.role}</div>
@@ -89,7 +90,7 @@ export default function PHCDetail() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div id="phc-stock" className="card p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="text-sm font-semibold text-slate-700">{t("stockLevels")}</div>
           <select
@@ -150,7 +151,7 @@ export default function PHCDetail() {
       </div>
 
       {forecastChartData.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div id="phc-forecast" className="card p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-semibold text-slate-700">{t("forecast")}</div>
             <div className="flex items-center gap-2">
@@ -223,8 +224,8 @@ export default function PHCDetail() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div id="phc-capacity" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="card p-4">
           <div className="text-sm font-semibold text-slate-700 mb-2">
             {t("bedOccupancy")} ({phc.dates.length} {t("days")})
           </div>
@@ -238,7 +239,7 @@ export default function PHCDetail() {
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div className="card p-4">
           <div className="text-sm font-semibold text-slate-700 mb-2">
             {t("staffAttendance")} ({phc.dates.length} {t("days")})
           </div>

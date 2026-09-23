@@ -5,6 +5,9 @@ import {
   Lock, FlaskConical, Ban, ShieldCheck, TrendingUp, CheckCircle2, Check, HeartPulse,
 } from "lucide-react";
 import { api } from "../lib/api";
+import PageLoader from "../components/PageLoader";
+import BenchmarkExplorer from "../components/BenchmarkExplorer";
+import FacilityCountBenchmark from "../components/FacilityCountBenchmark";
 import { useLang } from "../lib/LangContext";
 import type { NationalFederatedPrior, BricsSharedPrior } from "../lib/types";
 
@@ -83,7 +86,7 @@ export default function Federated() {
     });
   }, []);
 
-  if (!national || !brics) return <div className="text-center text-slate-400 py-20">{t("loading")}</div>;
+  if (!national || !brics) return <PageLoader label={t("loading")} />;
 
   const nationalChart = Object.entries(national.category_depletion_prior).map(([category, rate]) => ({
     category,
@@ -123,13 +126,13 @@ export default function Federated() {
         }
       `}</style>
 
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t("federated")}</h1>
+      <div id="fed-header">
+        <h1 className="page-title">{t("federated")}</h1>
         <p className="text-sm text-slate-500 mt-1 max-w-2xl">{t("onlyAggregates")}</p>
       </div>
 
       {/* Privacy Toggle */}
-      <div className="flex items-center gap-3">
+      <div id="fed-privacy-toggle" className="flex items-center gap-3">
         <span className="text-sm font-medium text-slate-600">Show data flow as:</span>
         <div className="flex rounded-lg border border-slate-200 overflow-hidden shadow-sm">
           <button
@@ -161,7 +164,7 @@ export default function Federated() {
       </div>
 
       {/* Interactive Federated Network Visualizer */}
-      <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-xl p-6 text-white relative overflow-hidden">
+      <div id="fed-network" className="bg-slate-900 rounded-xl border border-slate-800 shadow-xl p-6 text-white relative overflow-hidden">
         <div className={`absolute top-4 right-4 text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 border ${
           isRawMode
             ? "bg-rose-500/20 border-rose-500/30 text-rose-400"
@@ -233,7 +236,7 @@ export default function Federated() {
             {/* India Node */}
             <circle cx="80" cy="80" r="22" fill="#ea580c" className="node-pulse" style={{ transformOrigin: "80px 80px" }} />
             <text x="80" y="77" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">INDIA</text>
-            <text x="80" y="88" fill="#fed7aa" fontSize="7" textAnchor="middle">101 PHCs</text>
+            <text x="80" y="88" fill="#fed7aa" fontSize="7" textAnchor="middle">{national.total_facilities} facilities</text>
 
             {/* Brazil Node */}
             <circle cx="80" cy="240" r="22" fill="#16a34a" className="node-pulse" style={{ transformOrigin: "80px 240px" }} />
@@ -342,7 +345,7 @@ export default function Federated() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div id="fed-national" className="card p-4">
         <div className="text-sm font-semibold text-slate-700 mb-1">{t("nationalPrior")}</div>
         <div className="text-xs text-slate-400 mb-3">
           {national.participating_nodes.length} state nodes · {national.total_facilities} facilities
@@ -381,7 +384,7 @@ export default function Federated() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div id="fed-brics" className="card p-4">
         <div className="flex items-center gap-2 mb-1">
           <div className="text-sm font-semibold text-slate-700">{t("bricsPrior")}</div>
         </div>
@@ -437,6 +440,9 @@ export default function Federated() {
         </div>
         <p className="text-xs text-slate-400 mt-3">{brics.note}</p>
       </div>
+
+      <BenchmarkExplorer />
+      <FacilityCountBenchmark />
     </div>
   );
 }

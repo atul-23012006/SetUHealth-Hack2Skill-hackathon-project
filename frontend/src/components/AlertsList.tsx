@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { CloudLightning, TrendingUp } from "lucide-react";
 import type { Forecast } from "../lib/types";
 import { useLang } from "../lib/LangContext";
 import { api } from "../lib/api";
@@ -51,6 +51,15 @@ export default function AlertsList({ alerts }: { alerts: Forecast[] }) {
                     {a.medicine} —{" "}
                     {a.days_to_stockout === 0 ? t("outOfStock") : `${a.days_to_stockout} ${t("daysLeft")}`}
                   </span>
+                  {a.weather_adjusted && (
+                    <span
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-100"
+                      title={`Weather scenario: expected demand ×${a.weather_factor}. Baseline ${a.baseline_days_to_stockout ?? "no stockout"} days, ${a.baseline_risk}.`}
+                    >
+                      <CloudLightning size={11} aria-hidden="true" /> weather ×{a.weather_factor}
+                      {a.baseline_days_to_stockout != null && <span className="font-normal text-violet-500">· was {a.baseline_days_to_stockout} d</span>}
+                    </span>
+                  )}
                   {a.surge_detected && (
                     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100 uppercase tracking-wide">
                       <TrendingUp size={11} /> {t("demandSurge")}

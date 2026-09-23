@@ -68,6 +68,36 @@ def check_surge(levels: list[float]) -> tuple[float, float, bool]:
     return baseline_rate, recent_rate, is_surge
 
 
+def days_to_stockout_from_demand(current: float, reorder_level: float, demand) -> float | None:
+    """Days until stock falls to the reorder threshold, given a daily demand
+    series: the first forecast day it is reached, else extrapolated from the
+    average demand. Shared by the live forecast and the weather scenario so the
+    two can never apply different rules."""
+    if current <= reorder_level:
+        return 0.0
+    level = current
+    for idx, d in enumerate(demand):
+        level = max(0.0, level - float(d))
+        if round(level, 1) <= reorder_level:  # the forecast reports levels rounded to 0.1
+            return float(idx + 1)
+    avg_demand = float(np.mean(demand)) if len(demand) else 0.0
+    if avg_demand > 0.01:
+        return round((current - reorder_level) / avg_demand, 1)
+    return None
+
+
+def risk_for(current: float, days_to_stockout: float | None) -> str:
+    if current <= 0.05:
+        return "critical"  # severe out-of-stock state
+    if days_to_stockout is None:
+        return "low"
+    if days_to_stockout <= CRITICAL_DAYS:
+        return "critical"
+    if days_to_stockout <= WARNING_DAYS:
+        return "warning"
+    return "low"
+
+
 def forecast_medicine(phc_id: str, medicine: str) -> dict:
     cache_key = f"med_{phc_id}_{medicine}"
     if cache_key in _FORECAST_CACHE:
@@ -151,38 +181,11 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
         forecast_lower.append(round(level_upper, 1))  # lower inventory = upper demand bound
         forecast_upper.append(round(level_lower, 1))  # higher inventory = lower demand bound
 
-    # 5. Calculate predicted days to breach the safety threshold (reorder level)
-    days_to_stockout = None
-    
-    # Identify the first day where projected level is at or below the safety threshold
-    if current <= reorder_level:
-        days_to_stockout = 0.0
-    else:
-        for idx, p_level in enumerate(projected_levels):
-            if p_level <= reorder_level:
-                days_to_stockout = float(idx + 1)
-                break
-        
-        # If it doesn't breach within the 14-day forecast window, extrapolate using average forecasted demand
-        if days_to_stockout is None:
-            avg_demand = float(np.mean(forecasted_demand))
-            if avg_demand > 0.01:
-                days_to_stockout = round((current - reorder_level) / avg_demand, 1)
-
-    # 6. Determine risk level relative to safety threshold breach
+    # 5-6. Days to breach the safety threshold (reorder level), and the risk that implies.
+    days_to_stockout = days_to_stockout_from_demand(current, reorder_level, forecasted_demand)
     if current <= 0.05:
-        # Severe out of stock state
         days_to_stockout = 0.0
-        risk = "critical"
-    elif days_to_stockout is None:
-        risk = "low"
-    else:
-        if days_to_stockout <= CRITICAL_DAYS:
-            risk = "critical"
-        elif days_to_stockout <= WARNING_DAYS:
-            risk = "warning"
-        else:
-            risk = "low"
+    risk = risk_for(current, days_to_stockout)
 
     # 7. Keep the existing surge-detection mechanism separately
     baseline_rate, recent_rate, surge_detected = check_surge(levels)

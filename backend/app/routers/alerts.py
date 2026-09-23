@@ -1,12 +1,22 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 
-from app.services import forecasting, genai
+from app.services import forecasting, genai, live_data, weather_impact
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
 
 @router.get("")
-def get_alerts(state: str | None = None, limit: int = 20):
+def get_alerts(
+    state: str | None = None,
+    limit: int = 20,
+    weather_adjusted: bool = Query(False, description="Overlay the real weather outlook as a demand scenario"),
+    intensity: float = Query(1.0, ge=0.0, le=2.0),
+):
+    if weather_adjusted:
+        try:
+            return weather_impact.alerts(state, intensity)[:limit]
+        except live_data.LiveDataError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
     return forecasting.network_alerts(state)[:limit]
 
 

@@ -106,14 +106,14 @@ def test_over_threshold_quantity_never_auto_dispatches(synthetic_facility):
     )
 
     manifest = transfers.create_and_execute_transfer(
-        origin["id"], dest["id"], "Paracetamol 500mg", 999,  # far over the 50-unit threshold
+        origin["id"], dest["id"], "Paracetamol 500mg", 800,  # far over the 50-unit threshold, within the donor's 900
         auto_execute=True,
     )
     assert manifest["auto_dispatched"] is False
     assert "threshold" in manifest["auto_dispatch_declined_reason"]
     # Execution itself still happened exactly as before — quantity moved.
     assert manifest["status"] == "Completed"
-    assert manifest["quantity"] == 999
+    assert manifest["quantity"] == 800
 
 
 def test_critical_risk_destination_never_auto_dispatches(synthetic_facility):

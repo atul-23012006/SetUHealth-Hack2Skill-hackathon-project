@@ -28,7 +28,7 @@ a real logistics API tomorrow.
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.schemas.interop import TransferRequestV1
 from app.services import db
@@ -76,7 +76,7 @@ class SimulatedGroundCourierProvider(LogisticsProvider):
     def dispatch(self, transfer: TransferRequestV1) -> DispatchResult:
         eta_minutes = round((transfer.distance_km / AVERAGE_GROUND_COURIER_SPEED_KMH) * 60, 1)
         dispatch_id = f"DISP-{uuid.uuid4().hex[:8].upper()}"
-        dispatched_at = datetime.now(timezone.utc).isoformat()
+        dispatched_at = datetime.now(UTC).isoformat()
 
         db.log_event(
             "dispatch",

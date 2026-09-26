@@ -33,7 +33,7 @@ services:
         # network. Override for a real deployment.
         VITE_API_URL: http://localhost:8000
     ports:
-      - "8080:80"
+      - "8080:8080"
     depends_on:
       - backend
 

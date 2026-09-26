@@ -40,7 +40,7 @@ def execute_transfer(req: TransferRequest, user: dict = Depends(auth.get_current
             f"{user['label']} denied: {e}",
             {**req.model_dump(), "user_id": user["user_id"]},
         )
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
     try:
         manifest = transfers.create_and_execute_transfer(
@@ -49,7 +49,7 @@ def execute_transfer(req: TransferRequest, user: dict = Depends(auth.get_current
         )
         return {"status": "success", "manifest": manifest}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/pending")

@@ -25,7 +25,7 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
     forecasts = [f for f in (forecasts if forecasts is not None else forecast_all()) if f["medicine"] == medicine]
     deficits = [f for f in forecasts if f["risk"] in ("critical", "warning") and not f.get("cold_chain_alert")]
     surplus = []
-    
+
     for f in forecasts:
         if f.get("cold_chain_alert"):
             # If cold chain alert is active, evacuate all remaining stock before it spoils
@@ -68,7 +68,7 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
         prob += pulp.lpSum(x[(s_idx, d_idx)] for d_idx in range(len(deficits))) <= s["spare_units"], f"Donor_Spare_{s_idx}"
 
     # 2. Total received + unmet must equal the needed amount at deficit[d]
-    for d_idx, d in enumerate(deficits):
+    for d_idx, _d in enumerate(deficits):
         prob += pulp.lpSum(x[(s_idx, d_idx)] for s_idx in range(len(surplus))) + unmet[d_idx] == needed_vals[d_idx], f"Recipient_Need_{d_idx}"
 
     # Look up the resource's tier and calculate per-facility urgency weights to
@@ -95,7 +95,7 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
             dist = _haversine_km(s_phc, d_phc)
             cross_district = s_phc["district"] != d_phc["district"]
             cross_state = s_phc["state"] != d_phc["state"]
-            
+
             # Penalize long-distance and out-of-district/state moves to prefer local optimization
             cost = dist + (100.0 if cross_district else 0.0) + (500.0 if cross_state else 0.0)
             if s.get("cold_chain_alert"):
@@ -306,7 +306,7 @@ def _apply_cross_medicine_donor_cap(recs: list[dict]) -> list[dict]:
         by_phc.setdefault(r["from_phc_id"], []).append(r)
 
     dropped = set()
-    for phc_id, phc_recs in by_phc.items():
+    for _phc_id, phc_recs in by_phc.items():
         total_load = sum(_donor_load_fraction(r) for r in phc_recs)
         if total_load <= MAX_DONOR_LOAD:
             continue

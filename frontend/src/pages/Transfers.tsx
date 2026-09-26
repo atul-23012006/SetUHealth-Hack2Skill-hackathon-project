@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Truck, FileText, RefreshCw, Receipt } from "lucide-react";
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
+import { useAsync } from "../lib/useAsync";
 import { useLang } from "../lib/LangContext";
 import type { Transfer, AuditEvent } from "../lib/types";
 
@@ -10,27 +11,22 @@ const KIND_STYLE: Record<string, string> = {
   crisis: "bg-rose-50 text-rose-700 border-rose-100",
 };
 
+interface TransfersData {
+  transfers: Transfer[];
+  audit: AuditEvent[];
+}
+
 export default function Transfers() {
   const { t } = useLang();
-  const [transfers, setTransfers] = useState<Transfer[]>([]);
-  const [audit, setAudit] = useState<AuditEvent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const fetchTransfers = () => {
-    setLoading(true);
-    Promise.all([api.listTransfers(), api.auditLog(60)]).then(([data, log]) => {
-      // Sort newest first
-      data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setTransfers(data);
-      setAudit(log);
-      setLoading(false);
-    });
-  };
-
-  useEffect(() => {
-    fetchTransfers();
+  const { data, loading, error, reload } = useAsync<TransfersData>(async () => {
+    const [transfers, audit] = await Promise.all([api.listTransfers(), api.auditLog(60)]);
+    // Sort newest first
+    transfers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return { transfers, audit };
   }, []);
+  const { transfers, audit } = data ?? { transfers: [], audit: [] };
 
   const handleDownloadFhir = async (transferId: string) => {
     setDownloadingId(transferId);
@@ -65,13 +61,22 @@ export default function Transfers() {
           </div>
           <button
             id="transfers-refresh"
-            onClick={fetchTransfers}
+            onClick={reload}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50 cursor-pointer"
           >
             <RefreshCw size={14} /> Refresh
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {error}
+          <button onClick={reload} className="ml-auto rounded-md border border-amber-300 px-2 py-0.5 font-semibold hover:bg-amber-100">
+            {t("common.retry")}
+          </button>
+        </div>
+      )}
 
       <div id="transfers-table" className="card overflow-hidden">
         {transfers.length === 0 ? (

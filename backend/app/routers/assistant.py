@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.services import auth, db, forecasting, live_data, redistribution, genai
+from app.services import auth, db, forecasting, genai, live_data, redistribution
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
@@ -105,7 +105,7 @@ def execute_action(action: dict, user: dict | None = None) -> str:
             return f"🚨 [SYSTEM ACTION] Alert! Crisis simulation '{c_type}' triggered successfully for {t_type} '{t_name}'."
         except Exception as e:
             return f"❌ [SYSTEM ACTION] Crisis trigger failed: {str(e)}."
-            
+
     return ""
 
 

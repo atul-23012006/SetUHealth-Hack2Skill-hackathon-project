@@ -134,7 +134,7 @@ def _phc_indices(phc_id: str, end: int | None = None) -> dict | None:
         return None
 
     consumption_index = _mean(per_med_ratio)
-    contributions.sort(key=lambda c: abs(math.log((c["ratio"] + _EPS))), reverse=True)
+    contributions.sort(key=lambda c: abs(math.log(c["ratio"] + _EPS)), reverse=True)
     return {
         "phc_id": phc_id,
         "consumption_index": consumption_index,

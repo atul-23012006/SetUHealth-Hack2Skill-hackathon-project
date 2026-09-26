@@ -36,13 +36,13 @@ import random
 from datetime import date, timedelta
 from pathlib import Path
 
+from app.data import resource_types
+from app.data.reference import MEDICINES, REAL_PHC_COUNTS, STAFF_ROLES, STATES
+
 # Trailing window (days) over which a handful of facilities are given a
 # deliberate consumption-vs-footfall inconsistency, so the anomaly detector
 # (app/services/anomaly.py) has real signal to surface in a demo.
 ANOMALY_WINDOW = 21
-
-from app.data import resource_types
-from app.data.reference import STATES, MEDICINES, STAFF_ROLES, REAL_PHC_COUNTS
 
 SEED = 42
 # Non-PHC facilities draw from their own seeded stream so that adding them
@@ -138,14 +138,14 @@ def _generate_facility_series(facility, all_dates, rng, stress, surplus_bias):
     # --- bed occupancy (zero-width for facility types with no beds) ---
     base_occ = rng.uniform(0.4, 0.75) * (1.2 if stress else 1.0)
     occ = []
-    for d_iso in all_dates:
+    for _d_iso in all_dates:
         val = min(facility["beds_total"], max(0, round(facility["beds_total"] * min(1.0, base_occ + rng.uniform(-0.15, 0.2)))))
         occ.append(val)
 
     # --- staff attendance ---
     base_att = rng.uniform(0.78, 0.97) * (0.85 if stress else 1.0)
     att = []
-    for d_iso in all_dates:
+    for _d_iso in all_dates:
         val = min(100, max(30, round((base_att + rng.uniform(-0.1, 0.08)) * 100)))
         att.append(val)
 
@@ -309,7 +309,7 @@ def build(days: int | None = None):
     for state in sorted(STATES):
         state_phc_ids = [p["id"] for p in phcs if p["facility_type"] == "PHC" and p["state"] == state]
         rng.shuffle(state_phc_ids)
-        for pid, atype in zip(state_phc_ids[:2], ("pilferage", "underreport")):
+        for pid, atype in zip(state_phc_ids[:2], ("pilferage", "underreport"), strict=False):
             meds_hit = [m for m in high_volume_meds if m in stock_history[pid]][:2]
             if not meds_hit:
                 continue

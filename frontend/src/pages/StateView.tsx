@@ -1,34 +1,43 @@
-import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
+import { useAsync } from "../lib/useAsync";
 import { useLang } from "../lib/LangContext";
 import type { PHC, Forecast, RedistributionRec } from "../lib/types";
 import AlertsList from "../components/AlertsList";
 import RedistributionList from "../components/RedistributionList";
 
+interface StateData {
+  phcs: PHC[];
+  alerts: Forecast[];
+  recs: RedistributionRec[];
+  medicines: any[];
+}
+
 export default function StateView() {
   const { state } = useParams<{ state: string }>();
   const { t } = useLang();
-  const [phcs, setPhcs] = useState<PHC[]>([]);
-  const [alerts, setAlerts] = useState<Forecast[]>([]);
-  const [recs, setRecs] = useState<RedistributionRec[]>([]);
-  const [medicines, setMedicines] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!state) return;
-    setLoading(true);
-    Promise.all([api.phcs(state), api.alerts(state, 20), api.redistribution(state), api.medicines()]).then(([p, a, r, m]) => {
-      setPhcs(p);
-      setAlerts(a);
-      setRecs(r);
-      setMedicines(m || []);
-      setLoading(false);
-    });
+  const { data, loading, error, reload } = useAsync<StateData>(async () => {
+    const [phcs, alerts, recs, medicines] = await Promise.all([
+      api.phcs(state!), api.alerts(state!, 20), api.redistribution(state!), api.medicines(),
+    ]);
+    return { phcs, alerts, recs, medicines: medicines || [] };
   }, [state]);
 
   if (loading) return <PageLoader label={t("loading")} />;
+
+  if (error || !data) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        {error || t("loading")}
+        <button onClick={reload} className="ml-auto rounded-md border border-amber-300 px-2 py-0.5 font-semibold hover:bg-amber-100">
+          {t("common.retry")}
+        </button>
+      </div>
+    );
+  }
+  const { phcs, alerts, recs, medicines } = data;
 
   return (
     <div className="space-y-6">

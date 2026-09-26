@@ -18,19 +18,31 @@ function formatCountdown(totalSeconds: number): string {
   return `${String(d).padStart(2, "0")}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
 }
 
+function initialSecondsFor(daysToStockout: number | null): number {
+  return daysToStockout != null ? Math.max(0, Math.round(daysToStockout * 86400)) : 0;
+}
+
 export default function CountdownClock({ daysToStockout, medicine, phcName, district, state }: Props) {
-  const [seconds, setSeconds] = useState<number>(() =>
-    daysToStockout != null ? Math.max(0, Math.round(daysToStockout * 86400)) : 0
-  );
+  const [seconds, setSeconds] = useState(() => initialSecondsFor(daysToStockout));
+  // Tracks which `daysToStockout` `seconds` was last reset for, so a prop
+  // change can be caught during render (React's documented "adjusting state
+  // when a prop changes" pattern) instead of via a setState synchronized in
+  // an effect. This re-render happens before the browser paints, so it's
+  // exactly as immediate as the effect-based version was, without a separate
+  // render-then-correct pass.
+  const [resetFor, setResetFor] = useState(daysToStockout);
+  if (resetFor !== daysToStockout) {
+    setResetFor(daysToStockout);
+    setSeconds(initialSecondsFor(daysToStockout));
+  }
 
   useEffect(() => {
     if (daysToStockout == null || daysToStockout <= 0) return;
-    const initialSeconds = Math.max(0, Math.round(daysToStockout * 86400));
     const startTime = Date.now();
-    setSeconds(initialSeconds);
+    const initial = initialSecondsFor(daysToStockout);
     const id = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      setSeconds(Math.max(0, initialSeconds - elapsed));
+      setSeconds(Math.max(0, initial - elapsed));
     }, 1000);
     return () => clearInterval(id);
   }, [daysToStockout]);

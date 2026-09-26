@@ -19,9 +19,9 @@ def _call(fn, *args, **kwargs):
     try:
         return fn(*args, **kwargs)
     except live_data.LiveDataError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/weather/states")

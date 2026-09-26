@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 
-from app.services import redistribution, genai, forecasting, live_data, weather_impact
+from app.services import forecasting, genai, live_data, redistribution, weather_impact
 
 router = APIRouter(prefix="/api/redistribution", tags=["redistribution"])
 
@@ -19,7 +19,7 @@ def get_recommendations(
         try:
             recs = weather_impact.recommendations(state, intensity)
         except live_data.LiveDataError as exc:
-            raise HTTPException(status_code=503, detail=str(exc))
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
     else:
         recs = redistribution.recommend_all(state)
     if explain:

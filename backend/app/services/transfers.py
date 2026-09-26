@@ -1,6 +1,6 @@
 import math
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.schemas.interop import TransferRequestV1
 from app.services import db, geo, store
@@ -131,7 +131,7 @@ def create_and_execute_transfer(
                 distance_km=round(geo.haversine_km(from_phc, to_phc), 1),
                 cross_state=False,  # eligibility already requires same-state
                 urgency=risk,
-                generated_at=datetime.now(timezone.utc),
+                generated_at=datetime.now(UTC),
             )
             result = SimulatedGroundCourierProvider().dispatch(request)
             manifest["auto_dispatched"] = True

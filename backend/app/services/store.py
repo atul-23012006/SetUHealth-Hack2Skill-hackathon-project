@@ -18,7 +18,7 @@ medicine-specific clinical UI (tiers, NLEM metadata).
 import json
 
 from app.data import resource_types
-from app.data.generate_data import build, OUT_DIR
+from app.data.generate_data import OUT_DIR, build
 from app.services import db
 
 _REQUIRED = [
@@ -127,7 +127,7 @@ def resource_categories() -> set[str]:
 
 
 def states():
-    seen = {}
+    seen: dict[str, set[str]] = {}
     for p in PHCS:
         seen.setdefault(p["state"], set()).add(p["district"])
     return {s: sorted(d) for s, d in seen.items()}

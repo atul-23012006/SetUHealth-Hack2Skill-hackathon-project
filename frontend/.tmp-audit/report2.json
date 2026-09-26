@@ -1,0 +1,538 @@
+{
+  "findings": [
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Open command palette",
+      "action": "auto-close overlay opened by this control",
+      "expected": "Escape (or Skip) closes it",
+      "actual": "OK - closed",
+      "severity": "info",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Open command palette",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "1",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Uttar Pradesh: Mosquito-borne disease conditions i",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Refresh",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Simulate",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Simulate",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Simulate",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Simulate",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "Simulate",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "The assumptions behind this",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "30",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "61",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "7",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#17",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#18",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#69",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#70",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#71",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#72",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#73",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#74",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#75",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#76",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#77",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#78",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#79",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#80",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#81",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#82",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#83",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#84",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#85",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#86",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#87",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#88",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#89",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#90",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#91",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#92",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#93",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#94",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#95",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#96",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#97",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#98",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#99",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#100",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#101",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#102",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#103",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#104",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#105",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#106",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#107",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#108",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#109",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#110",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Dashboard (generic sweep, retry)",
+      "control": "button#111",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "severity": "warn",
+      "screenshot": null
+    }
+  ],
+  "issues": [],
+  "downloads": [],
+  "fatal": "Error: locator.count: Target page, context or browser has been closed"
+}

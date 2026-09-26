@@ -65,8 +65,11 @@ class OrbErrorBoundary extends Component<{ fallback: ReactNode; children: ReactN
 }
 
 export default function HeroOrbLazy() {
-  const [canRender3D, setCanRender3D] = useState<boolean | null>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  // Lazily initialized from the real browser APIs on first render (this
+  // component only ever mounts client-side), rather than starting at a
+  // placeholder value and correcting it with a setState in an effect.
+  const [canRender3D] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT_PX && supportsWebGL());
+  const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [visible, setVisible] = useState(true);
   const [tabVisible, setTabVisible] = useState(true);
   const [ready, setReady] = useState(false);
@@ -74,11 +77,8 @@ export default function HeroOrbLazy() {
 
   useEffect(() => {
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(motionQuery.matches);
     const onMotionChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
     motionQuery.addEventListener("change", onMotionChange);
-
-    setCanRender3D(window.innerWidth >= MOBILE_BREAKPOINT_PX && supportsWebGL());
 
     const onVisibility = () => setTabVisible(!document.hidden);
     document.addEventListener("visibilitychange", onVisibility);

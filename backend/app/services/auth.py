@@ -90,7 +90,10 @@ ISSUER = "setuhealth"
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
     digest = hashlib.scrypt(password.encode(), salt=salt, n=_SCRYPT_N, r=_SCRYPT_R, p=_SCRYPT_P, dklen=32)
-    b64 = lambda b: base64.b64encode(b).decode()
+
+    def b64(b: bytes) -> str:
+        return base64.b64encode(b).decode()
+
     return f"scrypt${_SCRYPT_N}${_SCRYPT_R}${_SCRYPT_P}${b64(salt)}${b64(digest)}"
 
 

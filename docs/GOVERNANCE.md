@@ -40,8 +40,8 @@ see the "Why AGPL" section below.
    with a single contributor base, this would be a claim with nothing
    behind it, so it isn't made.
 2. **Decisions made in the open.** Technical decisions that affect the
-   node-summary contract (`CONTRIBUTING.md`) or the privacy boundary
-   (Guardrail 3 in `SETUHEALTH_NEXT_LEVEL_PLAN.md`) should be proposed and
+   node-summary contract (`CONTRIBUTING.md`) or the aggregate-only privacy
+   boundary (`federated.py`'s module docstring) should be proposed and
    discussed as GitHub issues/PRs before merging, not decided privately —
    this is achievable immediately and doesn't wait for a foundation to
    exist.

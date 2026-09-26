@@ -100,6 +100,7 @@ def _generate_stream(prompt: str):
         return None
 
     def open_stream(model):
+        assert _client is not None  # guaranteed by the _client_ready check above
         stream = _client.models.generate_content_stream(model=model, contents=prompt, config=_GEN_CONFIG)
         first = next((c.text for c in stream if c.text), None)
         if first is None:
@@ -128,6 +129,7 @@ def _generate(prompt: str) -> str | None:
         return None
 
     def once(model):
+        assert _client is not None  # guaranteed by the _client_ready check above
         response = _client.models.generate_content(model=model, contents=prompt, config=_GEN_CONFIG)
         text = (response.text or "").strip()
         if not text:
@@ -245,10 +247,11 @@ def chat_reply_stream(query: str, context_summary: str, lang: str = "en"):
 def parse_chat_action(query: str) -> dict | None:
     import json
     import re
+
     from app.services import store
-    
+
     q = query.lower().strip()
-    
+
     if _client_ready:
         try:
             prompt = (
@@ -280,7 +283,7 @@ def parse_chat_action(query: str) -> dict | None:
     # 1. Reset Action
     if "reset" in q and ("simulation" in q or "database" in q or "data" in q or "store" in q):
         return {"action": "reset"}
-        
+
     # 2. Transfer Action
     transfer_match = re.search(
         r'(?:transfer|move)\s+(\d+(?:\.\d+)?)\s+(?:units\s+of\s+)?(.*?)\s+from\s+(phc-\d+)\s+to\s+(phc-\d+)',
@@ -289,7 +292,7 @@ def parse_chat_action(query: str) -> dict | None:
     if transfer_match:
         qty = float(transfer_match.group(1))
         med = transfer_match.group(2).strip().title()
-        
+
         # Spelling normalization
         for m in store.MEDICINES:
             if med.lower() in m["name"].lower() or m["name"].lower() in med.lower():
@@ -304,7 +307,7 @@ def parse_chat_action(query: str) -> dict | None:
             "medicine": med,
             "quantity": qty
         }
-        
+
     # 3. Crisis Simulation Action
     crisis_match = re.search(
         r'(?:trigger|simulate|fail)\s+(dengue|malaria|floods|cold\s+chain|monsoon\s+floods|dengue\s+outbreak|malaria\s+outbreak|cold\s+chain\s+failure)\s+(?:in|for)?\s*(?:state|district|phc)?\s*([a-zA-Z0-9\s\-]+)',
@@ -313,7 +316,7 @@ def parse_chat_action(query: str) -> dict | None:
     if crisis_match:
         c_type_raw = crisis_match.group(1).strip()
         target = crisis_match.group(2).strip().title()
-        
+
         c_type = "Dengue Outbreak"
         if "malaria" in c_type_raw:
             c_type = "Malaria Outbreak"
@@ -321,7 +324,7 @@ def parse_chat_action(query: str) -> dict | None:
             c_type = "Monsoon Floods"
         elif "cold" in c_type_raw or "failure" in c_type_raw:
             c_type = "Cold Chain Failure"
-            
+
         target_type = "district"
         import app.data.reference as ref
         if target in ref.STATES:
@@ -329,14 +332,14 @@ def parse_chat_action(query: str) -> dict | None:
         elif target.upper() in store.PHC_BY_ID:
             target_type = "phc"
             target = target.upper()
-            
+
         return {
             "action": "crisis",
             "target_type": target_type,
             "target_name": target,
             "crisis_type": c_type
         }
-        
+
     return None
 
 

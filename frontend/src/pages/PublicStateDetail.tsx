@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { AlertTriangle, ArrowRightLeft, Building2, Gauge, ShieldCheck, Users, UsersRound } from "lucide-react";
 import StatCard from "../components/StatCard";
 import PageLoader from "../components/PageLoader";
+import { useAsync } from "../lib/useAsync";
 import { useLang } from "../lib/LangContext";
 import type { PublicStateSummary } from "../lib/types";
 
@@ -14,19 +14,24 @@ import type { PublicStateSummary } from "../lib/types";
 export default function PublicStateDetail() {
   const { state } = useParams<{ state: string }>();
   const { t } = useLang();
-  const [summary, setSummary] = useState<PublicStateSummary | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!state) return;
-    setLoading(true);
-    api.publicStates().then((all) => {
-      setSummary(all.find((s) => s.state === state) ?? null);
-      setLoading(false);
-    });
+  const { data: summary, loading, error, reload } = useAsync<PublicStateSummary | null>(async () => {
+    const all = await api.publicStates();
+    return all.find((s) => s.state === state) ?? null;
   }, [state]);
 
   if (loading) return <PageLoader label={t("pubState.loading")} />;
+
+  if (error) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        {error}
+        <button onClick={reload} className="ml-auto rounded-md border border-amber-300 px-2 py-0.5 font-semibold hover:bg-amber-100">
+          {t("common.retry")}
+        </button>
+      </div>
+    );
+  }
 
   if (!summary) {
     return (

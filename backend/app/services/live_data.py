@@ -12,11 +12,10 @@ Weather-derived "signals" are transparent rule-of-thumb thresholds over real
 forecast values, not epidemiological or hydrological predictions; each carries
 the numbers that triggered it so a reader can judge it.
 """
-import math
 import statistics
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import httpx
 
@@ -268,7 +267,7 @@ def derive_signals(current: dict, daily: dict) -> list[dict]:
     total = round(sum(rain), 1)
     peak = round(max(rain), 1) if rain else 0.0
     hottest = round(max(tmax), 1) if tmax else None
-    mean_temp = round(statistics.fmean([(a + b) / 2 for a, b in zip(tmax, tmin)]), 1) if tmax and tmin else None
+    mean_temp = round(statistics.fmean([(a + b) / 2 for a, b in zip(tmax, tmin, strict=False)]), 1) if tmax and tmin else None
     humidity = current.get("relative_humidity_2m")
 
     signals = []
@@ -340,6 +339,7 @@ def _weather_entry(raw: dict) -> dict:
             for d, r, hi, lo in zip(
                 daily.get("time", []), daily.get("precipitation_sum", []),
                 daily.get("temperature_2m_max", []), daily.get("temperature_2m_min", []),
+                strict=False,
             )
         ],
         "rain_7d_mm": round(sum(v for v in daily.get("precipitation_sum", []) if v is not None), 1),
@@ -380,7 +380,7 @@ def state_weather() -> dict:
         return {
             "source": "Open-Meteo (open-meteo.com), no API key",
             "fetched_at": _now_iso(),
-            "states": [{"state": s, **e} for s, e in zip(centroids.keys(), entries)],
+            "states": [{"state": s, **e} for s, e in zip(centroids.keys(), entries, strict=False)],
             "stale": False,
         }
 

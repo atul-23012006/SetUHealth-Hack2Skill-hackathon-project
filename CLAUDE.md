@@ -16,6 +16,8 @@ python -m pytest tests -q                                  # full suite (~30s, 1
 python -m pytest tests/test_dispatch.py -q                 # one file
 python -m pytest tests/test_dispatch.py -q -k <name>       # one test
 python -m app.data.generate_data                           # rebuild the synthetic dataset
+ruff check app                                              # lint (config + rationale in pyproject.toml)
+mypy app                                                    # type-check (some legacy dict-modeled modules are exempted — see pyproject.toml)
 ```
 
 Frontend (run from `frontend/`):
@@ -75,8 +77,7 @@ From `CONTRIBUTING.md`, these apply to every change:
 
 - **Never present a simulated integration or synthetic figure as real.** Simulated things (dispatch provider, BRICS partner nodes, placeholder DHIS2 UIDs, seeded anomalies) are labelled as simulated in code, the audit log, and the UI. Only the 12 NLEM medicines' consumption anchors and district PHC counts are sourced (`data/reference.py`).
 - **Aggregate-only privacy boundary.** Only category-level summaries (e.g. `state_summary()`) may cross a federation node boundary; no facility or patient record may appear in a node summary. `federated.py`'s module docstring is the invariant.
-- Before a PR: `python -m pytest tests -q` in `backend/`; `npm run build && npm test` in `frontend/` (and `npm run test:e2e` if both dev servers are up).
-- CONTRIBUTING references `SETUHEALTH_NEXT_LEVEL_PLAN.md` for the full guardrails list; that file is not in the repo.
+- Before a PR: `ruff check app && mypy app && python -m pytest tests -q` in `backend/`; `npm run build && npm test` in `frontend/` (and `npm run test:e2e` if both dev servers are up). `.github/workflows/ci.yml` runs all of this (except e2e) on push/PR.
 
 Further docs: `docs/INTEROP.md` (external-system integration), `docs/GOVERNANCE.md` (AGPL-3.0 rationale), `README.md` (architecture diagram and data/model provenance).
 

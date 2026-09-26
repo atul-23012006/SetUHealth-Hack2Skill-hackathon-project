@@ -9,10 +9,26 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
 from app.routers import (
-    phc, forecast, alerts, redistribution, federated, assistant, crisis,
-    transfers, fhir, anomalies, audit, auth, public, export, live, notifications,
+    alerts,
+    anomalies,
+    assistant,
+    audit,
+    auth,
+    crisis,
+    export,
+    federated,
+    fhir,
+    forecast,
+    live,
+    notifications,
+    phc,
+    public,
+    redistribution,
+    transfers,
 )
-from app.services import auth as auth_service, signal_alerts
+from app.services import auth as auth_service
+from app.services import signal_alerts
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):

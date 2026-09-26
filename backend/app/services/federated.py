@@ -57,7 +57,7 @@ def state_summary(state: str) -> dict:
     # generate_data.py) — non-PHC facility types don't have their own
     # catchment population, so this only ever sums real PHC coverage.
     population_served = sum(p.get("population_served", 0) for p in phcs)
-    forecasts = [f for f in forecast_all(state=state)]
+    forecasts = list(forecast_all(state=state))
     by_category = {}
     critical_phc_ids = set()
     warning_phc_ids = set()

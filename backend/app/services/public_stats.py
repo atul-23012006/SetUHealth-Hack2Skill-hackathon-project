@@ -64,7 +64,7 @@ def state_summary() -> list[dict]:
         if state:
             transfers_by_state[state] = transfers_by_state.get(state, 0) + 1
 
-    states = sorted({p for p in federated.national_federated_prior()["participating_nodes"]})
+    states = sorted(set(federated.national_federated_prior()["participating_nodes"]))
     out = []
     for state in states:
         s = federated.state_summary(state)

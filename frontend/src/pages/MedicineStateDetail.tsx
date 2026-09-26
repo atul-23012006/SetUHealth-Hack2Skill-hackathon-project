@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Snowflake } from "lucide-react";
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
+import { useAsync } from "../lib/useAsync";
 import { useLang } from "../lib/LangContext";
 import type { PHCDetail as PHCDetailType, Forecast } from "../lib/types";
 import RiskBadge from "../components/RiskBadge";
+
+interface Drilldown {
+  detail: PHCDetailType;
+  forecast: Forecast | null;
+}
 
 export default function MedicineStateDetail() {
   const { medicine: rawMedicine, state: rawState } = useParams<{ medicine: string; state: string }>();
@@ -14,51 +20,27 @@ export default function MedicineStateDetail() {
   const state = rawState ? decodeURIComponent(rawState) : "";
   const { t } = useLang();
 
-  const [forecasts, setForecasts] = useState<Forecast[]>([]);
-  const [loading, setLoading] = useState(true);
-
   // selected PHC to show PHC-detail-like view
   const [selectedPhcId, setSelectedPhcId] = useState<string | null>(null);
-  const [selectedPhcDetail, setSelectedPhcDetail] = useState<PHCDetailType | null>(null);
-  const [selectedForecast, setSelectedForecast] = useState<Forecast | null>(null);
 
-  useEffect(() => {
-    if (!medicine || !state) return;
-    setLoading(true);
-    api.forecastAll()
-      .then((allForecasts) => {
-        // filter forecasts for this medicine & state
-        const items = allForecasts.filter((f) => f.medicine === medicine && f.state === state);
-        setForecasts(items);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
+  const { data: forecasts, loading } = useAsync<Forecast[]>(async () => {
+    if (!medicine || !state) return [];
+    const allForecasts = await api.forecastAll();
+    return allForecasts.filter((f) => f.medicine === medicine && f.state === state);
   }, [medicine, state]);
 
-  useEffect(() => {
-    if (!selectedPhcId) {
-      setSelectedPhcDetail(null);
-      setSelectedForecast(null);
-      return;
-    }
-    // load PHC detail and find forecast for selected phc
-    api.phc(selectedPhcId)
-      .then((p) => setSelectedPhcDetail(p))
-      .catch((err) => console.error(err));
-    api.forecastAll()
-      .then((all) => {
-        const f = all.find((x) => x.phc_id === selectedPhcId && x.medicine === medicine);
-        setSelectedForecast(f ?? null);
-      })
-      .catch((err) => console.error(err));
+  const { data: drilldown } = useAsync<Drilldown | null>(async () => {
+    if (!selectedPhcId) return null;
+    const [detail, all] = await Promise.all([api.phc(selectedPhcId), api.forecastAll()]);
+    const forecast = all.find((x) => x.phc_id === selectedPhcId && x.medicine === medicine) ?? null;
+    return { detail, forecast };
   }, [selectedPhcId, medicine]);
+  const selectedPhcDetail = drilldown?.detail ?? null;
+  const selectedForecast = drilldown?.forecast ?? null;
 
   const listItems = useMemo(() => {
     // join forecasts with PHC basic info
-    return forecasts
+    return (forecasts ?? [])
       .map((f) => ({
         phc_id: f.phc_id,
         phc_name: f.phc_name,

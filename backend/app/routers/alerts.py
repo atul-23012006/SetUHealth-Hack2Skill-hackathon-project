@@ -16,7 +16,7 @@ def get_alerts(
         try:
             return weather_impact.alerts(state, intensity)[:limit]
         except live_data.LiveDataError as exc:
-            raise HTTPException(status_code=503, detail=str(exc))
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
     return forecasting.network_alerts(state)[:limit]
 
 

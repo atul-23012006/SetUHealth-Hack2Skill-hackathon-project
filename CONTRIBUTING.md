@@ -32,9 +32,9 @@ for a state:
 
 This is **the only thing that crosses a node boundary.** No facility id, no
 lat/lon, no patient or staff record ever appears in this object — see
-Guardrail 3 in `SETUHEALTH_NEXT_LEVEL_PLAN.md` and `federated.py`'s own
-module docstring, which is the actual, enforced architectural invariant
-this whole platform is built around, not a policy on paper.
+`federated.py`'s own module docstring, which is the actual, enforced
+architectural invariant this whole platform is built around, not a policy
+on paper.
 `national_federated_prior()` and `brics_shared_prior()` take a list of these
 objects and federated-average `category_depletion_rates`, weighted by
 `facility_count` — that's the entire aggregation algorithm, and it doesn't
@@ -135,10 +135,11 @@ maintainers.
 
 ## Code contributions in general
 
-- Read `SETUHEALTH_NEXT_LEVEL_PLAN.md`'s Guardrails section first — in
-  particular, guardrail 2 (never present a simulated integration as real)
-  and guardrail 3 (the aggregate-only privacy boundary) apply to every PR,
-  not just the phase they were written for.
+- Two guardrails apply to every PR: never present a simulated integration
+  or synthetic figure as real (see the labelling `SimulatedDataBadge` and
+  the `note` fields throughout this codebase enforce), and the aggregate-only
+  privacy boundary above (`federated.py`'s module docstring). See
+  `CLAUDE.md`'s "Project invariants" for both, stated in full.
 - Run the backend test suite (`cd backend && python -m pytest tests -q`)
   and the frontend build (`cd frontend && npm run build`) before opening a
   PR; both are fast enough to run on every change.

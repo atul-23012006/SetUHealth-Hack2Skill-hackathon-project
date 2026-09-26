@@ -1,0 +1,21 @@
+import { chromium } from '@playwright/test';
+(async () => {
+  const browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
+  const page = await browser.newPage();
+  page.on('crash', () => console.log('PAGE CRASHED'));
+  page.on('console', m => { if (m.type()==='error') console.log('console-error:', m.text().slice(0,200)); });
+  page.on('pageerror', e => console.log('pageerror:', String(e).slice(0,200)));
+  console.log('navigating...');
+  await page.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+  console.log('loaded, waiting 3s');
+  await page.waitForTimeout(3000);
+  console.log('closed?', page.isClosed());
+  await page.screenshot({ path: '/tmp/isolate1.png' });
+  console.log('screenshot ok, waiting 5s more');
+  await page.waitForTimeout(5000);
+  console.log('closed?', page.isClosed());
+  const count = await page.locator('button:visible, [role="button"]:visible').count();
+  console.log('button count:', count);
+  await browser.close();
+  console.log('DONE');
+})().catch(e => console.log('ERR', e.message));

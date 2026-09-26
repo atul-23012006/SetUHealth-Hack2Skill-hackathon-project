@@ -59,6 +59,10 @@ export default function NotificationBell() {
   }, []);
 
   useEffect(() => {
+    // refresh() is async and only calls setState after its own await, but the
+    // linter can't see that from a bare call — this is the standard
+    // mount+poll data-fetching effect, not a synchronous setState.
+    // eslint-disable-next-line react/set-state-in-effect
     refresh();
     api.notificationConfig().then(setConfig).catch(() => {});
     const id = setInterval(() => { if (!document.hidden) refresh(); }, POLL_MS);

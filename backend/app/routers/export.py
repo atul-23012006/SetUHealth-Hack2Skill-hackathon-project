@@ -4,7 +4,7 @@ plain unauthenticated GET, without adopting SetuHealth wholesale. See
 docs/INTEROP.md for the integrator-facing writeup of both formats below.
 """
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Response
 
@@ -52,7 +52,7 @@ def _dhis2_uid(*key_parts: str) -> str:
     ),
 )
 def export_alerts() -> list[StockoutAlertV1]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return [
         StockoutAlertV1(
             alert_id=f"{a['phc_id']}:{a['resource_id']}",
@@ -91,7 +91,7 @@ def export_alerts() -> list[StockoutAlertV1]:
     ),
 )
 def export_transfers() -> list[TransferRequestV1]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     out = []
     for r in redistribution.recommend_all():
         resource = store.resource_type(r["medicine"])
@@ -136,7 +136,7 @@ def export_transfers() -> list[TransferRequestV1]:
 )
 def export_dhis2_adx() -> Response:
     prior = federated.national_federated_prior()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # ADX periods are ISO8601 (date|datetime)/(duration). SetuHealth's depletion
     # rates are a live current-state figure, not a closed reporting-period
     # submission, so the period is always "the calendar month this export was

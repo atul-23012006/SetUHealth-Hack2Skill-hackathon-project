@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { AlertTriangle, Building2, ChevronDown, ExternalLink, Info, RefreshCw } from "lucide-react";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
@@ -63,7 +64,11 @@ export default function FacilityCountBenchmark() {
               <tbody className="divide-y divide-slate-100">
                 {data.states.map((row) => (
                   <tr key={row.state} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 font-medium text-slate-800">{row.state}</td>
+                    <td className="px-3 py-2 font-medium text-slate-800">
+                      <Link to={`/states/${encodeURIComponent(row.state)}`} className="text-brand-700 hover:underline">
+                        {row.state}
+                      </Link>
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-700">{row.official.phcs?.toLocaleString() ?? "—"}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-500">{row.official.sub_centres?.toLocaleString() ?? "—"}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-500">{row.official.chcs?.toLocaleString() ?? "—"}</td>

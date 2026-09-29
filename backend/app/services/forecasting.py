@@ -8,7 +8,14 @@ of days until the projected inventory breaches the safety threshold (reorder lev
 """
 import numpy as np
 
-from app.services import store
+# Imported at module load, not lazily inside forecast_medicine's hot loop:
+# statsmodels.tsa.holtwinters is a heavy first import (~1.2-1.7s, one-time)
+# that used to land on whichever request happened to trigger the first
+# uncached forecast. Paying it here means it's paid once, at process start
+# (and again, separately, in each worker process warmed by warm_forecast_cache).
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+from app.services import store, worker_pool
 
 TREND_WINDOW = 14
 FORECAST_HORIZON = 14
@@ -98,12 +105,24 @@ def risk_for(current: float, days_to_stockout: float | None) -> str:
     return "low"
 
 
-def forecast_medicine(phc_id: str, medicine: str) -> dict:
-    cache_key = f"med_{phc_id}_{medicine}"
-    if cache_key in _FORECAST_CACHE:
-        return _FORECAST_CACHE[cache_key]
-
-    record = store.STOCK_HISTORY[phc_id][medicine]
+def _forecast_one(
+    phc_id: str,
+    medicine: str,
+    record: dict,
+    phc_meta: dict,
+    resource_meta: dict | None,
+    temperature: float | None,
+) -> dict:
+    """The actual forecast computation, over plain data only (no `store`
+    import) so it can run in a worker process — see `forecast_all`'s
+    docstring for why. `record` is one STOCK_HISTORY[phc_id][medicine] entry,
+    `phc_meta` the facility's {name, state, district, facility_type},
+    `resource_meta` the registry entry for `medicine` as {id, is_perishable}
+    or None, and `temperature` the facility's current reading (already
+    resolved by the caller, since store.get_facility_temp's seeded-random
+    baseline plus any active cold-chain failure both need live `store` state
+    a worker doesn't have). Kept at module level (not nested in
+    forecast_medicine) because only a module-level function is picklable."""
     levels = record["levels"]
     current = levels[-1]
     reorder_level = record["reorder_level"]
@@ -127,7 +146,6 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
     # 2. Fit Holt's Linear Exponential Smoothing if enough history exists
     if len(consumption) >= MIN_OBSERVATIONS:
         try:
-            from statsmodels.tsa.holtwinters import ExponentialSmoothing
             # Holt's Linear Exponential Smoothing (trend="add", seasonal=None)
             model = ExponentialSmoothing(
                 np.array(consumption, dtype=float),
@@ -190,27 +208,27 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
     # 7. Keep the existing surge-detection mechanism separately
     baseline_rate, recent_rate, surge_detected = check_surge(levels)
 
-    # Cold-chain monitoring is a property of the resource, read from the
-    # registry — not a list of medicine names hardcoded in the engine. Any
-    # perishable resource (insulin, oxytocin, O-negative blood) is
-    # temperature-tracked identically.
-    resource = store.resource_type(medicine)
-    is_cold_chain = bool(resource and resource.is_perishable)
-    temperature = store.get_facility_temp(phc_id) if is_cold_chain else None
-    cold_chain_alert = (temperature > 8.0 or temperature < 2.0) if is_cold_chain else False
+    # Cold-chain monitoring is a property of the resource — not a list of
+    # medicine names hardcoded in the engine. Any perishable resource
+    # (insulin, oxytocin, O-negative blood) is temperature-tracked
+    # identically. `temperature` is already resolved by the caller (needs
+    # live `store` state a worker doesn't have — see this function's docstring).
+    is_cold_chain = bool(resource_meta and resource_meta["is_perishable"])
+    if not is_cold_chain:
+        temperature = None
+    cold_chain_alert = (temperature > 8.0 or temperature < 2.0) if is_cold_chain and temperature is not None else False
 
-    phc = store.PHC_BY_ID[phc_id]
     result = {
         "phc_id": phc_id,
-        "phc_name": phc["name"],
-        "state": phc["state"],
-        "district": phc["district"],
-        "facility_type": phc.get("facility_type", "PHC"),
+        "phc_name": phc_meta["name"],
+        "state": phc_meta["state"],
+        "district": phc_meta["district"],
+        "facility_type": phc_meta.get("facility_type", "PHC"),
         # `medicine` is the stock-history key and stays the display label every
         # existing consumer already renders; `resource_id`/`resource_category`
         # are additive, for consumers that work in generic resource terms.
         "medicine": medicine,
-        "resource_id": resource.id if resource else medicine,
+        "resource_id": resource_meta["id"] if resource_meta else medicine,
         "resource_category": record.get("category"),
         "unit": record["unit"],
         "current_level": current,
@@ -230,8 +248,55 @@ def forecast_medicine(phc_id: str, medicine: str) -> dict:
         "temperature": temperature,
         "cold_chain_alert": cold_chain_alert,
     }
+    return result
+
+
+def forecast_medicine(phc_id: str, medicine: str) -> dict:
+    """Single-item lookup, reading directly from live `store` — used
+    everywhere a caller needs one facility's one-medicine forecast (alerts,
+    transfers, single explain calls). Backed by the same cache `forecast_all`
+    fills, so a call here after `forecast_all` has run is a cache hit."""
+    cache_key = f"med_{phc_id}_{medicine}"
+    if cache_key in _FORECAST_CACHE:
+        return _FORECAST_CACHE[cache_key]
+
+    record = store.STOCK_HISTORY[phc_id][medicine]
+    phc = store.PHC_BY_ID[phc_id]
+    resource = store.resource_type(medicine)
+    resource_meta = {"id": resource.id, "is_perishable": resource.is_perishable} if resource else None
+    temperature = store.get_facility_temp(phc_id) if resource_meta and resource_meta["is_perishable"] else None
+
+    result = _forecast_one(phc_id, medicine, record, phc, resource_meta, temperature)
     _FORECAST_CACHE[cache_key] = result
     return result
+
+
+def _resource_meta_snapshot() -> dict[str, dict | None]:
+    """{medicine: {id, is_perishable}} for every tracked resource, or None for
+    one not in the registry — see `_forecast_one`'s docstring for why this is
+    passed in rather than looked up per item inside a worker."""
+    from app.data import resource_types
+    out: dict[str, dict | None] = {}
+    for rk in store.resource_stock_keys():
+        r = resource_types.get(rk)
+        out[rk] = {"id": r.id, "is_perishable": r.is_perishable} if r else None
+    return out
+
+
+def _temperature_snapshot(resource_meta: dict[str, dict | None]) -> dict[str, float | None]:
+    """{phc_id: temperature} for every facility that stocks at least one
+    perishable resource — store.get_facility_temp's seeded-random baseline
+    plus any active cold-chain failure both need live `store` state, so this
+    is resolved once, up front, in this process rather than per item in a
+    worker that doesn't have it."""
+    any_perishable = any(m and m["is_perishable"] for m in resource_meta.values())
+    if not any_perishable:
+        return {}
+    out = {}
+    for phc_id, meds in store.STOCK_HISTORY.items():
+        if any(resource_meta.get(m) and resource_meta[m]["is_perishable"] for m in meds):
+            out[phc_id] = store.get_facility_temp(phc_id)
+    return out
 
 
 def forecast_all(state: str | None = None) -> list[dict]:
@@ -246,10 +311,34 @@ def forecast_all(state: str | None = None) -> list[dict]:
     if cache_key in _FORECAST_CACHE:
         return _FORECAST_CACHE[cache_key]
 
+    # The national, fully-uncached case is the expensive one (every
+    # facility/medicine pair, ~1.9k Holt's-smoothing fits — measured ~5-7s
+    # serial, dominated by genuine per-fit CPU work, not I/O). Parallelising
+    # it the same way as redistribution.recommend_all cuts that toward
+    # roughly (total work) / (CPU cores). A state-scoped cold call (rare: only
+    # if that state is asked for before anything warms the national cache)
+    # stays serial — the item count is small enough that pool-dispatch
+    # overhead wouldn't pay for itself.
+    if state is None:
+        resource_meta = _resource_meta_snapshot()
+        temperatures = _temperature_snapshot(resource_meta)
+        items = [
+            (phc_id, medicine, meds[medicine], phc, resource_meta.get(medicine), temperatures.get(phc_id))
+            for phc_id, meds in store.STOCK_HISTORY.items()
+            for phc in [store.PHC_BY_ID[phc_id]]
+            for medicine in meds
+        ]
+        futures = worker_pool.map_unordered(_forecast_one, items)
+        results = [fut.result() for fut in futures]
+        for r in results:
+            _FORECAST_CACHE[f"med_{r['phc_id']}_{r['medicine']}"] = r
+        _FORECAST_CACHE[cache_key] = results
+        return results
+
     results = []
     for phc_id, meds in store.STOCK_HISTORY.items():
         phc = store.PHC_BY_ID[phc_id]
-        if state and phc["state"] != state:
+        if phc["state"] != state:
             continue
         for medicine in meds:
             results.append(forecast_medicine(phc_id, medicine))

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, BellRing, CheckCheck, CloudLightning, Loader2, RefreshCw } from "lucide-react";
 import { api } from "../lib/api";
@@ -8,6 +8,8 @@ import type { AppNotification, NotificationConfig } from "../lib/types";
 
 const POLL_MS = 60_000;
 const DESKTOP_KEY = "setuhealth_desktop_alerts";
+const PANEL_WIDTH = 380;
+const VIEWPORT_MARGIN = 12; // keep this far from any screen edge
 
 function timeAgo(iso: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -39,6 +41,14 @@ export default function NotificationBell() {
   const [message, setMessage] = useState<string | null>(null);
   const [desktop, setDesktop] = useState(desktopEnabled);
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  // Fixed-position coordinates for the panel, computed from the button's
+  // actual place in the viewport each time it opens. `absolute right-0`
+  // anchors to this component's own tiny wrapper, not the header — so when
+  // the bell sits anywhere left-of-center (as it now does, next to search),
+  // a 380px panel ran off the left edge of the screen. Measuring and
+  // clamping in JS keeps it on-screen regardless of where the button is.
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
   const maxSeen = useRef<number | null>(null); // highest id already known, so history never re-notifies
 
   const refresh = useCallback(async () => {
@@ -76,6 +86,28 @@ export default function NotificationBell() {
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+
+  // Recompute the panel's on-screen position whenever it opens or the
+  // viewport changes (resize, or a phone rotating). Runs before paint so the
+  // panel never flashes at its old/default spot.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const btn = buttonRef.current?.getBoundingClientRect();
+      if (!btn) return;
+      const width = Math.min(PANEL_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2);
+      // Prefer right-aligned to the button (its usual spot); flip to
+      // left-aligned only if that would run off the left edge; either way,
+      // clamp so it can never sit past the right edge either.
+      let left = btn.right - width;
+      left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - width - VIEWPORT_MARGIN));
+      const top = Math.min(btn.bottom + 8, window.innerHeight - VIEWPORT_MARGIN);
+      setPanelPos({ top, left });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
   }, [open]);
 
   const openItem = async (n: AppNotification) => {
@@ -129,6 +161,7 @@ export default function NotificationBell() {
   return (
     <div ref={rootRef} className="relative" id="notification-bell">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={t("notif.aria", { n: unread })}
@@ -144,9 +177,19 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {open && (
-        <div role="dialog" aria-label={t("notif.title")} className="animate-tour-pop absolute right-0 top-full z-40 mt-2 w-[min(92vw,380px)] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+      {open && panelPos && (
+        <div
+          role="dialog"
+          aria-label={t("notif.title")}
+          style={{
+            top: panelPos.top,
+            left: panelPos.left,
+            width: Math.min(PANEL_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2),
+            maxHeight: `calc(100vh - ${panelPos.top + VIEWPORT_MARGIN}px)`,
+          }}
+          className="animate-tour-pop fixed z-40 flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10"
+        >
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 shrink-0">
             <div className="text-sm font-semibold text-slate-800">{t("notif.title")}</div>
             <div className="flex items-center gap-1">
               <button onClick={checkNow} disabled={checking} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">
@@ -158,9 +201,9 @@ export default function NotificationBell() {
             </div>
           </div>
 
-          {message && <div role="status" className="animate-fade-in border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-600">{message}</div>}
+          {message && <div role="status" className="animate-fade-in shrink-0 border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-600">{message}</div>}
 
-          <ul className="max-h-[52vh] overflow-y-auto">
+          <ul className="flex-1 overflow-y-auto">
             {items.length === 0 && (
               <li className="px-4 py-8 text-center text-xs text-slate-400">
                 {t("notif.empty")}
@@ -188,7 +231,7 @@ export default function NotificationBell() {
             ))}
           </ul>
 
-          <div className="space-y-2 border-t border-slate-100 bg-slate-50 px-4 py-3">
+          <div className="shrink-0 space-y-2 border-t border-slate-100 bg-slate-50 px-4 py-3">
             <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
               <input type="checkbox" role="switch" checked={desktop} onChange={toggleDesktop} className="h-3.5 w-3.5 accent-brand-600" />
               {t("notif.desktop")}

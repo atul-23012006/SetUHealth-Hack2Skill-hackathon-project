@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import FacilityCountBenchmark from './FacilityCountBenchmark'
 import { LangProvider } from '../lib/LangContext'
 import { api } from '../lib/api'
@@ -36,9 +37,11 @@ const SAMPLE: Benchmark = {
 
 function renderPanel() {
   return render(
-    <LangProvider>
-      <FacilityCountBenchmark />
-    </LangProvider>,
+    <MemoryRouter>
+      <LangProvider>
+        <FacilityCountBenchmark />
+      </LangProvider>
+    </MemoryRouter>,
   )
 }
 

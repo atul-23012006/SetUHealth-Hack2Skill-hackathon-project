@@ -314,3 +314,13 @@ button:active:not(:disabled) {
     scroll-behavior: auto !important;
   }
 }
+
+/* Crisis simulator: a value the simulation just changed flashes, then settles.
+   Background-only (no transform), so it never creates a stacking context. */
+@keyframes change-flash {
+  0%, 35% { background-color: rgb(254 205 211 / 0.9); }
+  100% { background-color: transparent; }
+}
+.change-flash {
+  animation: change-flash 2.4s ease-out backwards;
+}

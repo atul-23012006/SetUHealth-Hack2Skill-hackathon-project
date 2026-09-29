@@ -14,7 +14,11 @@ function PublicStat({ label, value, thousands }: { label: string; value: string 
   const animated = useCountUp(value, 1600, thousands);
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-400/40 hover:bg-white/10">
-      <div className="text-3xl font-bold tabular-nums text-white">{animated}</div>
+      {/* text-2xl on narrow screens: population_served renders as a
+          7-8 digit thousands-formatted number ("4,601,642") that crowds the
+          card's right edge at text-3xl in a 2-col mobile grid — sm: restores
+          the larger size once there's a 5-col grid's worth of room. */}
+      <div className="text-2xl font-bold tabular-nums text-white sm:text-3xl">{animated}</div>
       <div className="mt-1 text-xs uppercase tracking-wide text-brand-200">{label}</div>
     </div>
   );

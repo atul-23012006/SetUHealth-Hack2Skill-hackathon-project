@@ -36,9 +36,16 @@ def _top_alerts_diverse(state: str | None, per_state_cap: int = 3, total_cap: in
     return diverse
 
 
-def _build_context(state: str | None) -> str:
+def _build_context(state: str | None) -> tuple[str, list[dict]]:
+    """Returns the prompt text and the (phc_id, phc_name) pairs it was built
+    from — the second is never sent to the model, only used afterward by
+    _related_facilities to find which of these the reply actually named."""
     alerts = _top_alerts_diverse(state)
     recs = redistribution.recommend_all(state)[:10]
+    facilities = [{"phc_id": a["phc_id"], "phc_name": a["phc_name"]} for a in alerts]
+    facilities += [{"phc_id": r["from_phc_id"], "phc_name": r["from_phc_name"]} for r in recs]
+    facilities += [{"phc_id": r["to_phc_id"], "phc_name": r["to_phc_name"]} for r in recs]
+
     lines = ["Current stockout alerts (sampled across states for coverage):"]
     for a in alerts:
         lines.append(
@@ -58,7 +65,28 @@ def _build_context(state: str | None) -> str:
     if weather:
         lines.append("Real weather forecast by state (Open-Meteo, next 7 days):")
         lines.extend(weather)
-    return "\n".join(lines)
+    return "\n".join(lines), facilities
+
+
+def _related_facilities(reply: str, query: str, facilities: list[dict], limit: int = 5) -> list[dict]:
+    """Facilities from the context the reply (or the question itself, e.g.
+    "what about Pune PHC 3?") actually named, in the order first mentioned —
+    not just the top of whatever was fed into the prompt. A plain-text
+    fabricated or misremembered facility name can never match here, since
+    matching is against phc_name strings this service itself produced, not
+    against anything the model invented. De-duplicated by phc_id."""
+    haystack = f"{query}\n{reply}"
+    seen: set[str] = set()
+    out: list[dict] = []
+    for f in facilities:
+        if f["phc_id"] in seen:
+            continue
+        if f["phc_name"] and f["phc_name"] in haystack:
+            seen.add(f["phc_id"])
+            out.append(f)
+            if len(out) >= limit:
+                break
+    return out
 
 
 def execute_action(action: dict, user: dict | None = None) -> str:
@@ -91,6 +119,8 @@ def execute_action(action: dict, user: dict | None = None) -> str:
                 f"assistant denied: {e}",
                 {"from_phc_id": from_id, "to_phc_id": to_id, "medicine": med, "quantity": qty,
                  "user_id": user["user_id"] if user else None},
+                from_phc_id=from_id,
+                to_phc_id=to_id,
             )
             return f"🚫 [SYSTEM ACTION] Transfer denied: {e}."
         except Exception as e:
@@ -109,24 +139,28 @@ def execute_action(action: dict, user: dict | None = None) -> str:
     return ""
 
 
-def _prepare(req: ChatRequest, user: dict | None) -> tuple[str, str]:
-    """Run any action the message asks for; return (action feedback, data context)."""
+def _prepare(req: ChatRequest, user: dict | None) -> tuple[str, str, list[dict]]:
+    """Run any action the message asks for; return (action feedback, data
+    context, facilities the context was built from — for _related_facilities
+    to match the reply against once it's known)."""
     action = genai.parse_chat_action(req.query)
     feedback = ""
     if action and action.get("action") != "none":
         feedback = execute_action(action, user)
-    return feedback, _build_context(req.state)
+    context, facilities = _build_context(req.state)
+    return feedback, context, facilities
 
 
 @router.post("/chat")
 def chat(req: ChatRequest, user: dict | None = Depends(auth.get_current_user_optional)):
-    feedback, context = _prepare(req, user)
+    feedback, context, facilities = _prepare(req, user)
     reply = genai.chat_reply(req.query, context, req.lang)
+    related = _related_facilities(reply, req.query, facilities)
 
     if feedback:
         reply = f"{feedback}\n\n{reply}"
 
-    return {"reply": reply}
+    return {"reply": reply, "related": related}
 
 
 def _sse(payload: dict) -> str:
@@ -136,17 +170,24 @@ def _sse(payload: dict) -> str:
 @router.post("/chat/stream")
 def chat_stream(req: ChatRequest, user: dict | None = Depends(auth.get_current_user_optional)):
     """Same as /chat but streamed as server-sent events: ``{"delta": "..."}``
-    chunks, then ``{"done": true}``. Any action feedback is sent first."""
-    feedback, context = _prepare(req, user)
+    chunks, then a ``{"related": [...]}`` event once the full reply is known
+    (link-matching needs the complete text, not a partial chunk), then
+    ``{"done": true}``. Any action feedback is sent first."""
+    feedback, context, facilities = _prepare(req, user)
 
     def events():
         if feedback:
             yield _sse({"delta": f"{feedback}\n\n"})
+        full_reply = ""
         try:
             for chunk in genai.chat_reply_stream(req.query, context, req.lang):
+                full_reply += chunk
                 yield _sse({"delta": chunk})
         except Exception:
             yield _sse({"error": "The assistant could not finish this answer."})
+        related = _related_facilities(full_reply, req.query, facilities)
+        if related:
+            yield _sse({"related": related})
         yield _sse({"done": True})
 
     return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

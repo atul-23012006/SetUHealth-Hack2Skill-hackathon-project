@@ -219,9 +219,29 @@ _UNAVAILABLE_INTRO = {
 }
 
 
+# Cap the mock reply's echoed context to keep the chat bubble scannable
+# without a live model to summarize it. A raw character slice cuts mid-word
+# ("...Lucknow PHC 3 (Luckno") with no sign anything was omitted — instead
+# keep whole lines (each is one alert/rec/weather entry, see _build_context)
+# up to the budget, and say explicitly when lines were dropped.
+_OFFLINE_REPLY_CHAR_BUDGET = 400
+
+
 def _offline_reply(context_summary: str, lang: str) -> str:
     intros = _UNAVAILABLE_INTRO if _client_ready else _OFFLINE_INTRO
-    return f"{intros.get(lang, intros['en'])}{context_summary[:400]}"
+    lines = context_summary.split("\n")
+    kept: list[str] = []
+    used = 0
+    for line in lines:
+        # +1 for the newline that will join it back
+        if used + len(line) + 1 > _OFFLINE_REPLY_CHAR_BUDGET and kept:
+            break
+        kept.append(line)
+        used += len(line) + 1
+    body = "\n".join(kept)
+    if len(kept) < len(lines):
+        body += f"\n… ({len(lines) - len(kept)} more lines omitted)"
+    return f"{intros.get(lang, intros['en'])}{body}"
 
 
 def chat_reply(query: str, context_summary: str, lang: str = "en") -> str:

@@ -9,9 +9,12 @@ import type {
   BricsSharedPrior,
   Transfer,
   ActiveCrisis,
+  CrisisImpact,
+  CrisisSeverity,
   ConsumptionAnomaly,
   CapacityRecommendations,
   AuditEvent,
+  RelatedFacility,
   ActingUser,
   PublicStateSummary,
   PublicNationalSummary,
@@ -135,14 +138,18 @@ export const api = {
   federatedNational: () => client.get<NationalFederatedPrior>("/api/federated/national").then((r) => r.data),
   federatedBrics: () => client.get<BricsSharedPrior>("/api/federated/brics").then((r) => r.data),
   chat: (query: string, lang: string, state?: string) =>
-    client.post<{ reply: string }>("/api/assistant/chat", { query, lang, state }).then((r) => r.data.reply),
-  // Streams the reply as server-sent events, calling onDelta for each chunk.
+    client
+      .post<{ reply: string; related?: RelatedFacility[] }>("/api/assistant/chat", { query, lang, state })
+      .then((r) => ({ reply: r.data.reply, related: r.data.related ?? [] })),
+  // Streams the reply as server-sent events, calling onDelta for each chunk
+  // and onRelated once (after the last delta) with any facilities the reply named.
   chatStream: async (
     query: string,
     lang: string,
     state: string | undefined,
     onDelta: (text: string) => void,
     signal?: AbortSignal,
+    onRelated?: (facilities: RelatedFacility[]) => void,
   ): Promise<void> => {
     const res = await fetch(`${BASE_URL}/api/assistant/chat/stream`, {
       method: "POST",
@@ -167,6 +174,7 @@ export const api = {
         const event = JSON.parse(raw.slice(6));
         if (event.error) throw new Error(event.error);
         if (event.delta) onDelta(event.delta);
+        if (event.related) onRelated?.(event.related);
         if (event.done) return;
       }
     }
@@ -235,16 +243,19 @@ export const api = {
       })
       .then((r) => r.data.manifest);
   },
-  triggerCrisis: (target_type: string, target_name: string, crisis_type: string) =>
+  triggerCrisis: (target_type: string, target_name: string, crisis_type: string, intensity = 1.0) =>
     client
-      .post<{ status: string; active_crises: ActiveCrisis[] }>("/api/crisis/trigger", {
+      .post<{ status: string; active_crises: ActiveCrisis[]; impact: CrisisImpact }>("/api/crisis/trigger", {
         target_type,
         target_name,
         crisis_type,
+        intensity,
       })
       .then((r) => r.data),
   resetCrisis: () => client.post<{ status: string; message: string }>("/api/crisis/reset").then((r) => r.data),
   activeCrises: () => client.get<ActiveCrisis[]>("/api/crisis/active").then((r) => r.data),
+  crisisImpacts: () => client.get<CrisisImpact[]>("/api/crisis/impact").then((r) => r.data),
+  crisisSeverity: () => client.get<CrisisSeverity>("/api/crisis/severity").then((r) => r.data),
   explainTransfer: (fromId: string, toId: string, medicine: string, lang: string) =>
     client
       .get<{ explanation: string }>(
@@ -264,8 +275,8 @@ export const api = {
       .then((r) => r.data),
   anomalyNetworkStatus: () =>
     client.get<{ available: boolean; systemic_shift: boolean; drift_z?: number }>("/api/anomalies/network-status").then((r) => r.data),
-  auditLog: (limit = 100) =>
-    client.get<AuditEvent[]>("/api/audit", { params: { limit } }).then((r) => r.data),
+  auditLog: (limit = 100, phcId?: string) =>
+    client.get<AuditEvent[]>("/api/audit", { params: { limit, phc_id: phcId } }).then((r) => r.data),
   authConfig: () => client.get<{ mode: "demo" | "token" }>("/api/auth/config").then((r) => r.data),
   login: (userId: string, password: string) =>
     client

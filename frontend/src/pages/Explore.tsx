@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Circle, CircleMarker, MapContainer, Marker, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -104,6 +104,7 @@ function ErrorNote({ what, error, onRetry }: { what: string; error: string; onRe
 
 export default function Explore() {
   const { t } = useLang();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const lat = Number(params.get("lat")) || DEFAULT_PLACE.lat;
   const lon = Number(params.get("lon")) || DEFAULT_PLACE.lon;
@@ -338,12 +339,20 @@ export default function Explore() {
                   center={[f.lat, f.lon]}
                   radius={active === f.id ? 11 : f.risk === "critical" ? 8 : 6}
                   pathOptions={{ color: "#fff", weight: 2, fillColor: RISK_COLOR[f.risk], fillOpacity: 0.95 }}
-                  eventHandlers={{ mouseover: () => setActive(f.id), mouseout: () => setActive(null) }}
+                  eventHandlers={{
+                    mouseover: () => setActive(f.id),
+                    mouseout: () => setActive(null),
+                    // Same destination the list view's facility name already
+                    // links to (below) — the map pin was the one way to spot
+                    // a facility here that didn't also let you drill into it.
+                    click: () => navigate(`/phcs/${f.id}`),
+                  }}
                 >
                   <Tooltip direction="top">
                     <div className="text-xs">
                       <div className="font-semibold">{f.name}</div>
                       <div className="text-slate-500">{f.risk} risk · {f.distance_km} km · <span className="font-semibold text-amber-700">{t("explore.tag.synthetic")}</span></div>
+                      <div className="mt-0.5 text-brand-600 font-medium">{t("explore.viewFacility")}</div>
                     </div>
                   </Tooltip>
                 </CircleMarker>

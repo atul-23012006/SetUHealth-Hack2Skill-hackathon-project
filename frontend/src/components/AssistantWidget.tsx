@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Building2, Mic, Square } from "lucide-react";
 import { useLang } from "../lib/LangContext";
 import { LANGUAGES } from "../lib/i18n";
 import { api } from "../lib/api";
+import type { RelatedFacility } from "../lib/types";
 
 interface Message {
   role: "user" | "assistant";
   text: string;
+  // Facilities the reply named (matched server-side, see assistant.py), shown
+  // as links once the reply is complete.
+  related?: RelatedFacility[];
 }
 
 // Minimal ambient typing for the Web Speech API (not in default TS lib dom types).
@@ -55,20 +60,23 @@ export default function AssistantWidget({ state }: { state?: string }) {
     abortRef.current = controller;
     const setReply = (fn: (prev: string) => string) =>
       setMessages((m) => m.map((msg, i) => (i === m.length - 1 ? { ...msg, text: fn(msg.text) } : msg)));
+    const setRelated = (related: RelatedFacility[]) =>
+      setMessages((m) => m.map((msg, i) => (i === m.length - 1 ? { ...msg, related } : msg)));
     let received = "";
     try {
       await api.chatStream(query, lang, state, (delta) => {
         received += delta;
         setReply((prev) => prev + delta);
-      }, controller.signal);
+      }, controller.signal, setRelated);
       speak(received);
     } catch {
       if (controller.signal.aborted) return; // the operator pressed Stop; keep what has arrived
       if (received === "") {
         // Streaming failed before any text (e.g. a proxy that buffers): fall back to the one-shot endpoint.
         try {
-          const reply = await api.chat(query, lang, state);
+          const { reply, related } = await api.chat(query, lang, state);
           setReply(() => reply);
+          setRelated(related);
           speak(reply);
         } catch {
           setReply(() => "Sorry, I couldn't get an answer. Please try again.");
@@ -118,7 +126,7 @@ export default function AssistantWidget({ state }: { state?: string }) {
           <div className="text-sm text-slate-400 text-center mt-10">{t("askAssistant")}</div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
             <div
               className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
                 m.role === "user" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-800"
@@ -132,6 +140,20 @@ export default function AssistantWidget({ state }: { state?: string }) {
                 </span>
               ) : null)}
             </div>
+            {m.related && m.related.length > 0 && (
+              <div className="mt-1.5 flex max-w-[80%] flex-wrap items-center gap-1.5" aria-label={t("assistant.related")}>
+                <span className="text-[11px] text-slate-400">{t("assistant.related")}</span>
+                {m.related.map((f) => (
+                  <Link
+                    key={f.phc_id}
+                    to={`/phcs/${f.phc_id}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 hover:bg-brand-100"
+                  >
+                    <Building2 size={11} aria-hidden="true" /> {f.phc_name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

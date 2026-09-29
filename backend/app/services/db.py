@@ -73,13 +73,28 @@ CREATE TABLE IF NOT EXISTS live_cache (
     payload     TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS event_log (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    ts       TEXT NOT NULL,
-    kind     TEXT NOT NULL,
-    summary  TEXT NOT NULL,
-    payload  TEXT
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts           TEXT NOT NULL,
+    kind         TEXT NOT NULL,
+    summary      TEXT NOT NULL,
+    payload      TEXT,
+    from_phc_id  TEXT,
+    to_phc_id    TEXT
 );
 """
+# The from_phc_id/to_phc_id indexes are created in init_db(), not here: on an
+# existing database (predating these columns) this executescript() runs
+# before init_db()'s ALTER TABLE migration adds them, so an index on them at
+# this point would fail with "no such column" against that old table.
+
+# event_log rows are free-text (kind/summary/payload) because not every event
+# kind is about one facility — a crisis targets a state or district (see
+# store.crisis_targets: "state"/"district"/"all", never a single phc_id), and
+# login/live_signal events have no facility at all. from_phc_id/to_phc_id are
+# nullable and populated only for the event kinds that genuinely have them
+# (transfer, transfer_rejected, transfer_attempted_offline, dispatch) so
+# PHCDetail can show "this facility's own history" without a rigid schema
+# forcing every event kind to pretend it has a facility.
 
 
 def _conn() -> sqlite3.Connection:
@@ -93,11 +108,26 @@ def _now() -> str:
     return datetime.now().isoformat()
 
 
+def _add_column_if_missing(conn: sqlite3.Connection, table: str, column: str, coldef: str) -> None:
+    """SQLite has no ADD COLUMN IF NOT EXISTS; check PRAGMA table_info first.
+    Only for a genuinely new, nullable column on an existing table — an
+    already-running deployment's event_log predates from_phc_id/to_phc_id,
+    and CREATE TABLE IF NOT EXISTS in _SCHEMA does nothing for a table that
+    already exists, so this is what actually adds them on upgrade."""
+    cols = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coldef}")
+
+
 def init_db() -> None:
     """Create tables if missing and one-time-migrate a legacy transfers.json."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with _conn() as conn:
         conn.executescript(_SCHEMA)
+        _add_column_if_missing(conn, "event_log", "from_phc_id", "TEXT")
+        _add_column_if_missing(conn, "event_log", "to_phc_id", "TEXT")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_event_log_from_phc ON event_log(from_phc_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_event_log_to_phc ON event_log(to_phc_id)")
         row = conn.execute("SELECT COUNT(*) AS n FROM transfers").fetchone()
         if row["n"] == 0:
             legacy = OUT_DIR / "transfers.json"
@@ -125,6 +155,8 @@ def record_transfer(manifest: dict) -> None:
         f"{manifest['quantity']} {manifest.get('unit', '')} of {manifest['medicine']} "
         f"{manifest['from_phc_name']} -> {manifest['to_phc_name']}",
         manifest,
+        from_phc_id=manifest["from_phc_id"],
+        to_phc_id=manifest["to_phc_id"],
     )
 
 
@@ -166,19 +198,37 @@ def clear_crises() -> None:
 
 # --- audit trail ---------------------------------------------------------------
 
-def log_event(kind: str, summary: str, payload: dict | None = None) -> None:
+def log_event(
+    kind: str, summary: str, payload: dict | None = None,
+    from_phc_id: str | None = None, to_phc_id: str | None = None,
+) -> None:
+    """from_phc_id/to_phc_id are optional and only meaningful for event kinds
+    that are genuinely about a facility move (transfer, transfer_rejected,
+    transfer_attempted_offline, dispatch) — see the event_log schema comment
+    in _SCHEMA. Every other call site simply omits them; a facility-scoped
+    query then just never matches those rows, which is correct."""
     with _conn() as conn:
         conn.execute(
-            "INSERT INTO event_log (ts, kind, summary, payload) VALUES (?, ?, ?, ?)",
-            (_now(), kind, summary, json.dumps(payload) if payload is not None else None),
+            "INSERT INTO event_log (ts, kind, summary, payload, from_phc_id, to_phc_id) VALUES (?, ?, ?, ?, ?, ?)",
+            (_now(), kind, summary, json.dumps(payload) if payload is not None else None, from_phc_id, to_phc_id),
         )
 
 
-def list_events(limit: int = 100) -> list[dict]:
+def list_events(limit: int = 100, phc_id: str | None = None) -> list[dict]:
+    """phc_id, when given, returns only events where this facility was the
+    origin or destination (transfers, dispatches) — used by PHCDetail to show
+    a facility's own history instead of the full network's audit trail."""
     with _conn() as conn:
-        rows = conn.execute(
-            "SELECT ts, kind, summary FROM event_log ORDER BY id DESC LIMIT ?", (limit,)
-        ).fetchall()
+        if phc_id:
+            rows = conn.execute(
+                "SELECT ts, kind, summary FROM event_log "
+                "WHERE from_phc_id = ? OR to_phc_id = ? ORDER BY id DESC LIMIT ?",
+                (phc_id, phc_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT ts, kind, summary FROM event_log ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
     return [dict(r) for r in rows]
 
 

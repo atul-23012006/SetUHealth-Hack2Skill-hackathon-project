@@ -1,15 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import {
   Building2, ClipboardList, User, Package, BarChart3, AlertTriangle, Hash, Bot,
   Lock, FlaskConical, Ban, ShieldCheck, TrendingUp, CheckCircle2, Check, HeartPulse,
+  Globe, ExternalLink,
 } from "lucide-react";
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
 import BenchmarkExplorer from "../components/BenchmarkExplorer";
 import FacilityCountBenchmark from "../components/FacilityCountBenchmark";
 import { useLang } from "../lib/LangContext";
-import type { NationalFederatedPrior, BricsSharedPrior } from "../lib/types";
+import { useCountUp } from "../lib/useCountUp";
+import type { NationalFederatedPrior, BricsSharedPrior, PHC, Forecast, RedistributionRec } from "../lib/types";
+
+// Animated number for the SDG panel.
+function CountUp({ value, thousands = false }: { value: string | number; thousands?: boolean }) {
+  return <>{useCountUp(value, 1200, thousands)}</>;
+}
 
 const RAW_DATA_BLOCKED = [
   { label: "Patient records", icon: HeartPulse },
@@ -79,12 +87,40 @@ export default function Federated() {
   const [privacyMode, setPrivacyMode] = useState<"aggregated" | "raw">("aggregated");
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
 
+  // For the SDG 3.8 panel only — a national-reporting rollup, so it lives
+  // here rather than on the operational Dashboard.
+  const [phcs, setPhcs] = useState<PHC[]>([]);
+  const [forecasts, setForecasts] = useState<Forecast[]>([]);
+  const [recs, setRecs] = useState<RedistributionRec[]>([]);
+
   useEffect(() => {
     Promise.all([api.federatedNational(), api.federatedBrics()]).then(([n, b]) => {
       setNational(n);
       setBrics(b);
     });
+    Promise.all([api.phcs(), api.forecastAll(), api.redistribution()]).then(([p, f, r]) => {
+      setPhcs(p);
+      setForecasts(f);
+      setRecs(r);
+    });
   }, []);
+
+  const sdgMetrics = useMemo(() => {
+    const criticalPhcSet = new Set(forecasts.filter((f) => f.risk === "critical").map((f) => f.phc_id));
+    const urgentRecs = recs.filter((r) => r.urgency === "critical" || r.urgency === "warning");
+    const stockoutDaysPrevented = urgentRecs.reduce((sum, r) => {
+      const recipForecast = forecasts.find((f) => f.phc_id === r.to_phc_id && f.medicine === r.medicine);
+      return sum + (recipForecast?.days_to_stockout ?? 0);
+    }, 0);
+    const patientsAtRisk = criticalPhcSet.size * 2000;
+    const coverageScore = phcs.length > 0 ? Math.round((1 - criticalPhcSet.size / phcs.length) * 100) : 100;
+    return {
+      criticalPhcs: criticalPhcSet.size,
+      stockoutDaysPrevented: Math.round(stockoutDaysPrevented),
+      patientsAtRisk,
+      coverageScore,
+    };
+  }, [forecasts, recs, phcs]);
 
   if (!national || !brics) return <PageLoader label={t("loading")} />;
 
@@ -129,6 +165,57 @@ export default function Federated() {
       <div id="fed-header">
         <h1 className="page-title">{t("federated")}</h1>
         <p className="text-sm text-slate-500 mt-1 max-w-2xl">{t("onlyAggregates")}</p>
+      </div>
+
+      {/* SDG 3.8 Impact Dashboard — moved here from the Dashboard: a national
+          reporting rollup, not something an operator needs while triaging today's alerts. */}
+      <div id="sdg-panel" className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 border border-brand-800/50 rounded-xl p-5 text-white shadow-lg">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <div className="font-bold text-brand-300 text-base flex items-center gap-2">
+              <Globe size={18} /> SDG 3.8 Impact Dashboard
+            </div>
+            <div className="text-xs text-slate-400 mt-0.5">
+              Universal Health Coverage — Live impact estimates based on current network state
+            </div>
+          </div>
+          <a
+            href="https://sdgs.un.org/goals/goal3"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-brand-400 hover:text-brand-300 border border-brand-800 px-2 py-1 rounded-lg transition-colors inline-flex items-center gap-1"
+          >
+            UN SDG Goal 3 <ExternalLink size={10} />
+          </a>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+            <div className="text-2xl font-black text-rose-300"><CountUp value={sdgMetrics.criticalPhcs} /></div>
+            <div className="text-xs text-slate-400 mt-1">Facilities at critical risk</div>
+          </div>
+          <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+            <div className="text-2xl font-black text-orange-300"><CountUp value={sdgMetrics.patientsAtRisk} thousands /></div>
+            <div className="text-xs text-slate-400 mt-1">Patients potentially at risk</div>
+            <div className="text-[9px] text-slate-600 mt-0.5">Est. ~2,000 per critical PHC</div>
+          </div>
+          <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+            <div className="text-2xl font-black text-amber-300"><CountUp value={sdgMetrics.stockoutDaysPrevented} /></div>
+            <div className="text-xs text-slate-400 mt-1">Stockout-days preventable</div>
+            <div className="text-[9px] text-slate-600 mt-0.5">Via pending transfer recommendations</div>
+          </div>
+          <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+            <div className="flex items-baseline gap-1 mb-2">
+              <div className="text-2xl font-black text-brand-300"><CountUp value={`${sdgMetrics.coverageScore}%`} /></div>
+            </div>
+            <div className="w-full bg-white/10 rounded-full h-1.5">
+              <div
+                className="bg-gradient-to-r from-brand-400 to-emerald-400 h-1.5 rounded-full transition-all duration-700"
+                style={{ width: `${sdgMetrics.coverageScore}%` }}
+              />
+            </div>
+            <div className="text-xs text-slate-400 mt-1">SDG 3.8 Coverage Score</div>
+          </div>
+        </div>
       </div>
 
       {/* Privacy Toggle */}
@@ -373,7 +460,11 @@ export default function Federated() {
             <tbody className="divide-y divide-slate-100">
               {national.node_summaries.map((n) => (
                 <tr key={n.node}>
-                  <td className="px-2 py-1 font-medium text-slate-800">{n.node}</td>
+                  <td className="px-2 py-1 font-medium text-slate-800">
+                    <Link to={`/states/${encodeURIComponent(n.node)}`} className="text-brand-700 hover:underline">
+                      {n.node}
+                    </Link>
+                  </td>
                   <td className="px-2 py-1 text-slate-600">{n.facility_count}</td>
                   <td className="px-2 py-1 text-rose-600 font-semibold">{n.critical_alerts}</td>
                   <td className="px-2 py-1 text-amber-600 font-semibold">{n.warning_alerts}</td>

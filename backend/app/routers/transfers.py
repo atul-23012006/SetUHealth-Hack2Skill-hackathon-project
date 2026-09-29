@@ -39,6 +39,8 @@ def execute_transfer(req: TransferRequest, user: dict = Depends(auth.get_current
             "transfer_rejected",
             f"{user['label']} denied: {e}",
             {**req.model_dump(), "user_id": user["user_id"]},
+            from_phc_id=req.from_phc_id,
+            to_phc_id=req.to_phc_id,
         )
         raise HTTPException(status_code=403, detail=str(e)) from e
 
@@ -68,5 +70,7 @@ def log_pending_transfer(ping: PendingTransferPing):
         f"Facility {ping.from_phc_id} attempted to send {ping.quantity} {ping.medicine} "
         f"to {ping.to_phc_id} while offline (not yet applied — pending local sync)",
         ping.model_dump(),
+        from_phc_id=ping.from_phc_id,
+        to_phc_id=ping.to_phc_id,
     )
     return {"status": "logged"}

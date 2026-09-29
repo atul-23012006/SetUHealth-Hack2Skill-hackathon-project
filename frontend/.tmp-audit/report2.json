@@ -1,7 +1,34 @@
 {
   "findings": [
     {
-      "page": "Dashboard (generic sweep, retry)",
+      "page": "StateView",
+      "control": "StateView PHC table: first row",
+      "action": "click",
+      "expected": "navigates to /phcs/PHC-0001",
+      "actual": "OK -> http://localhost:5173/phcs/PHC-0001",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView",
+      "control": "StateView: back-to-dashboard link",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Menu",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
       "control": "Open command palette",
       "action": "auto-close overlay opened by this control",
       "expected": "Escape (or Skip) closes it",
@@ -10,7 +37,7 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
+      "page": "StateView (generic sweep)",
       "control": "Open command palette",
       "action": "click",
       "expected": "no console errors / failed requests",
@@ -19,8 +46,8 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "1",
+      "page": "StateView (generic sweep)",
+      "control": "Notifications, 0 unread",
       "action": "click",
       "expected": "no console errors / failed requests",
       "actual": "OK",
@@ -28,7 +55,25 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
+      "page": "StateView (generic sweep)",
+      "control": "Check now",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Mark all read",
+      "action": "skip",
+      "expected": "n/a",
+      "actual": "disabled at sweep time, skipped",
+      "severity": "info",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
       "control": "Uttar Pradesh: Mosquito-borne disease conditions i",
       "action": "click",
       "expected": "no console errors / failed requests",
@@ -37,8 +82,8 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "Refresh",
+      "page": "StateView (generic sweep)",
+      "control": "button#6",
       "action": "click",
       "expected": "no console errors / failed requests",
       "actual": "OK",
@@ -46,8 +91,8 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "Simulate",
+      "page": "StateView (generic sweep)",
+      "control": "Moderate",
       "action": "click",
       "expected": "no console errors / failed requests",
       "actual": "OK",
@@ -55,8 +100,8 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "Simulate",
+      "page": "StateView (generic sweep)",
+      "control": "Severe",
       "action": "click",
       "expected": "no console errors / failed requests",
       "actual": "OK",
@@ -64,43 +109,7 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "Simulate",
-      "action": "click",
-      "expected": "no console errors / failed requests",
-      "actual": "OK",
-      "severity": "ok",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "Simulate",
-      "action": "click",
-      "expected": "no console errors / failed requests",
-      "actual": "OK",
-      "severity": "ok",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "Simulate",
-      "action": "click",
-      "expected": "no console errors / failed requests",
-      "actual": "OK",
-      "severity": "ok",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "The assumptions behind this",
-      "action": "click",
-      "expected": "no console errors / failed requests",
-      "actual": "OK",
-      "severity": "ok",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
+      "page": "StateView (generic sweep)",
       "control": "30",
       "action": "click",
       "expected": "no console errors / failed requests",
@@ -109,7 +118,7 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
+      "page": "StateView (generic sweep)",
       "control": "61",
       "action": "click",
       "expected": "clicks without throwing",
@@ -118,17 +127,53 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
+      "page": "StateView (generic sweep)",
       "control": "7",
       "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "3",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "21",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "4",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "5",
+      "action": "click",
       "expected": "no console errors / failed requests",
       "actual": "OK",
       "severity": "ok",
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#17",
+      "page": "StateView (generic sweep)",
+      "control": "Explain with AI",
       "action": "click",
       "expected": "no console errors / failed requests",
       "actual": "OK",
@@ -136,8 +181,8 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#18",
+      "page": "StateView (generic sweep)",
+      "control": "Explain with AI",
       "action": "click",
       "expected": "no console errors / failed requests",
       "actual": "OK",
@@ -145,8 +190,188 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#69",
+      "page": "StateView (generic sweep)",
+      "control": "Explain with AI",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Explain with AI",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Explain with AI",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Explain with AI",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Explain with AI",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Why?",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Execute",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Why?",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Execute",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Why?",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Execute",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Why?",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Execute",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Why?",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Execute",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Why?",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Execute",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Why?",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "Execute",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "StateView (generic sweep)",
+      "control": "(harness)",
+      "action": "StateView",
+      "expected": "section completes without throwing",
+      "actual": "EXCEPTION: TIMEOUT after 45000ms: section StateView — moving to next section",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "Why?",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
@@ -154,8 +379,134 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#70",
+      "page": "PHCDetail",
+      "control": "Menu",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "Open command palette",
+      "action": "auto-close overlay opened by this control",
+      "expected": "Escape (or Skip) closes it",
+      "actual": "OK - closed",
+      "severity": "info",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "Open command palette",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "Notifications, 0 unread",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "Check now",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "Acting as (used to authorize transfers)",
+      "action": "select \"phc_operator_001\"",
+      "expected": "no console errors",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "select#1",
+      "action": "select \"hi\"",
+      "expected": "no console errors",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "select#2",
+      "action": "select \"ORS Sachets\"",
+      "expected": "no console errors",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail",
+      "control": "PHCDetail: back-to-state link",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "MedicineStateDetail",
+      "control": "MedicineStateDetail: View (row 1)",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "MedicineStateDetail",
+      "control": "MedicineStateDetail: back-to-dashboard link",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Menu",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Open command palette",
+      "action": "auto-close overlay opened by this control",
+      "expected": "Escape (or Skip) closes it",
+      "actual": "OK - closed",
+      "severity": "info",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Open command palette",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "button#38",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
@@ -163,8 +514,62 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#71",
+      "page": "Explore",
+      "control": "Notifications, 0 unread",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "button#39",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Use my location",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Pune",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Patna",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Jaipur",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "button#40",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
@@ -172,8 +577,71 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#72",
+      "page": "Explore",
+      "control": "Kochi",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Lucknow",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Chennai",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Network facilities (synthetic)",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Real facilities (OpenStreetMap)",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Radius",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "button#14",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "button#41",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
@@ -181,8 +649,62 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#73",
+      "page": "Explore",
+      "control": "+",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "−",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Network · synthetic (10)",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Real · OSM (120)",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "Refresh",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Explore",
+      "control": "(harness)",
+      "action": "Explore",
+      "expected": "section completes without throwing",
+      "actual": "EXCEPTION: TIMEOUT after 45000ms: section Explore — moving to next section",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "button#42",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
@@ -190,8 +712,8 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#74",
+      "page": "Federated",
+      "control": "button#20",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
@@ -199,8 +721,287 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#75",
+      "page": "Federated",
+      "control": "Federated: Show Raw Data toggle",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Federated: Aggregated Only toggle",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "button#21",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Menu",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Open command palette",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Indonesia",
+      "action": "auto-close overlay opened by this control",
+      "expected": "Escape (or Skip) closes it",
+      "actual": "OK - closed",
+      "severity": "info",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Indonesia",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Notifications, 0 unread",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Ethiopia",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Hospital beds",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Why is the network count so much smaller?",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Physicians",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Refresh",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Health expenditure",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "DPT immunization",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Life expectancy",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Tuberculosis incidence",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Malaria incidence",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Brazil",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Russia",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "[{\"page\":\"Federated\",\"type\":\"console-error\",\"text\":\"Access to XMLHttpRequest at 'http://localhost:8000/api/redistribution' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\"},{\"page\":\"Federated\",\"type\":\"requestfailed\",\"text\":\"GET http://localhost:8000/api/redistribution :: net::ERR_FAILED\"},{\"page\":\"Federated\",\"type\":\"console-error\",\"text\":\"Failed to load resource: net::ERR_FAILED\"},{\"page\":\"Federated\",\"type\":\"pageerror\",\"text\":\"AxiosError: Network Error\"}]",
+      "severity": "warn",
+      "screenshot": "/home/lokesh/dev/01-projects/SetUHealth-Hack2Skill-hackathon-project/frontend/.tmp-audit/shots/08-Russia.png"
+    },
+    {
+      "page": "Federated",
+      "control": "India",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "China",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "South Africa",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Egypt",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Ethiopia",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Iran",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "UAE",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Indonesia",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Refresh",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "Acting as (used to authorize transfers)",
+      "action": "select \"phc_operator_001\"",
+      "expected": "no console errors",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Federated",
+      "control": "select#1",
+      "action": "select \"hi\"",
+      "expected": "no console errors",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Transfers",
+      "control": "Transfers: Refresh",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
@@ -208,8 +1009,224 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#76",
+      "page": "Transfers",
+      "control": "Transfers: FHIR export",
+      "action": "locate",
+      "expected": "at least one transfer row",
+      "actual": "NOT FOUND (no transfers in ledger)",
+      "severity": "info",
+      "screenshot": null
+    },
+    {
+      "page": "Transfers",
+      "control": "Menu",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Transfers",
+      "control": "Open command palette",
+      "action": "auto-close overlay opened by this control",
+      "expected": "Escape (or Skip) closes it",
+      "actual": "OK - closed",
+      "severity": "info",
+      "screenshot": null
+    },
+    {
+      "page": "Transfers",
+      "control": "Open command palette",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Transfers",
+      "control": "button#43",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Transfers",
+      "control": "Notifications, 0 unread",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Transfers",
+      "control": "Check now",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Transfers",
+      "control": "select#1",
+      "action": "select \"hi\"",
+      "expected": "no console errors",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Assistant",
+      "control": "Assistant: state filter select",
+      "action": "change",
+      "expected": "changes without error",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Assistant",
+      "control": "Assistant: Send",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Assistant",
+      "control": "Assistant: Mic button",
+      "action": "click",
+      "expected": "no console errors / failed requests",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PublicPortal",
+      "control": "button#26",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "PublicPortal",
+      "control": "PublicPortal: scroll-to-map CTA",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "PublicPortal",
+      "control": "PublicPortal: \"Officer console\" link",
+      "action": "click",
+      "expected": "navigates to / (console)",
+      "actual": "OK -> http://localhost:5173/",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PublicPortal",
+      "control": "PublicPortal map marker",
+      "action": "locate",
+      "expected": "at least one clickable marker",
+      "actual": "NOT FOUND with generic selector",
+      "severity": "info",
+      "screenshot": null
+    },
+    {
+      "page": "PublicPortal",
+      "control": "Language",
+      "action": "select \"hi\"",
+      "expected": "no console errors",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PublicStateDetail",
+      "control": "Language",
+      "action": "select \"hi\"",
+      "expected": "no console errors",
+      "actual": "OK",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PublicStateDetail",
+      "control": "PublicStateDetail: back link",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "StateView with bogus state",
+      "control": "StateView with bogus state",
+      "action": "goto",
+      "expected": "graceful empty/error state, no crash",
+      "actual": "OK - no console errors, page rendered",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail with bogus id",
+      "control": "button#44",
+      "action": "click",
+      "expected": "clicks without throwing",
+      "actual": "EXCEPTION: locator.click: Timeout 2500ms exceeded.",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "PHCDetail with bogus id",
+      "control": "PHCDetail with bogus id",
+      "action": "goto",
+      "expected": "graceful empty/error state, no crash",
+      "actual": "[{\"page\":\"PHCDetail with bogus id\",\"type\":\"http-404\",\"text\":\"http://localhost:8000/api/phcs/PHC-DOES-NOT-EXIST\"},{\"page\":\"PHCDetail with bogus id\",\"type\":\"console-error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\"},{\"page\":\"PHCDetail with bogus id\",\"type\":\"pageerror\",\"text\":\"AxiosError: Request failed with status code 404\"},{\"page\":\"PHCDetail with bogus id\",\"type\":\"http-404\",\"text\":\"http://localhost:8000/api/phcs/PHC-DOES-NOT-EXIST\"},{\"page\":\"PHCDetail with bogus id\",\"type\":\"console-error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\"},{\"page\":\"PHCDetail with bogus id\",\"type\":\"pageerror\",\"text\":\"AxiosError: Request failed with status code 404\"}]",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "MedicineStateDetail with bogus medicine",
+      "control": "MedicineStateDetail with bogus medicine",
+      "action": "goto",
+      "expected": "graceful empty/error state, no crash",
+      "actual": "OK - no console errors, page rendered",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "PublicStateDetail with bogus state",
+      "control": "PublicStateDetail with bogus state",
+      "action": "goto",
+      "expected": "graceful empty/error state, no crash",
+      "actual": "OK - no console errors, page rendered",
+      "severity": "ok",
+      "screenshot": null
+    },
+    {
+      "page": "Unknown top-level route",
+      "control": "Unknown top-level route",
+      "action": "goto",
+      "expected": "graceful empty/error state, no crash",
+      "actual": "[{\"page\":\"Unknown top-level route\",\"type\":\"console-warning\",\"text\":\"No routes matched location \\\"/this-route-does-not-exist\\\" \"},{\"page\":\"Unknown top-level route\",\"type\":\"console-warning\",\"text\":\"No routes matched location \\\"/this-route-does-not-exist\\\" \"}]",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Unknown top-level route",
+      "control": "button#27",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
@@ -217,8 +1234,17 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#77",
+      "page": "Unknown top-level route",
+      "control": "(harness)",
+      "action": "genericSweep",
+      "expected": "browser stays alive",
+      "actual": "browser died mid-sweep at button 28/139 — aborting sweep for this page",
+      "severity": "warn",
+      "screenshot": null
+    },
+    {
+      "page": "Unknown top-level route",
+      "control": "button#45",
       "action": "click",
       "expected": "clicks without throwing",
       "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
@@ -226,313 +1252,76 @@
       "screenshot": null
     },
     {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#78",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#79",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#80",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#81",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#82",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#83",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#84",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#85",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#86",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#87",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#88",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#89",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#90",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#91",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#92",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#93",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#94",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#95",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#96",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#97",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#98",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#99",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#100",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#101",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#102",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#103",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#104",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#105",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#106",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#107",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#108",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#109",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#110",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
-      "severity": "warn",
-      "screenshot": null
-    },
-    {
-      "page": "Dashboard (generic sweep, retry)",
-      "control": "button#111",
-      "action": "click",
-      "expected": "clicks without throwing",
-      "actual": "EXCEPTION: locator.click: Target page, context or browser has been closed",
+      "page": "Unknown top-level route",
+      "control": "(harness)",
+      "action": "genericSweep",
+      "expected": "browser stays alive",
+      "actual": "browser died mid-sweep at button 46/68 — aborting sweep for this page",
       "severity": "warn",
       "screenshot": null
     }
   ],
-  "issues": [],
-  "downloads": [],
-  "fatal": "Error: locator.count: Target page, context or browser has been closed"
+  "issues": [
+    {
+      "page": "Federated",
+      "type": "console-error",
+      "text": "Access to XMLHttpRequest at 'http://localhost:8000/api/redistribution' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+    },
+    {
+      "page": "Federated",
+      "type": "requestfailed",
+      "text": "GET http://localhost:8000/api/redistribution :: net::ERR_FAILED"
+    },
+    {
+      "page": "Federated",
+      "type": "console-error",
+      "text": "Failed to load resource: net::ERR_FAILED"
+    },
+    {
+      "page": "Federated",
+      "type": "pageerror",
+      "text": "AxiosError: Network Error"
+    },
+    {
+      "page": "PHCDetail with bogus id",
+      "type": "http-404",
+      "text": "http://localhost:8000/api/phcs/PHC-DOES-NOT-EXIST"
+    },
+    {
+      "page": "PHCDetail with bogus id",
+      "type": "console-error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "page": "PHCDetail with bogus id",
+      "type": "pageerror",
+      "text": "AxiosError: Request failed with status code 404"
+    },
+    {
+      "page": "PHCDetail with bogus id",
+      "type": "http-404",
+      "text": "http://localhost:8000/api/phcs/PHC-DOES-NOT-EXIST"
+    },
+    {
+      "page": "PHCDetail with bogus id",
+      "type": "console-error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "page": "PHCDetail with bogus id",
+      "type": "pageerror",
+      "text": "AxiosError: Request failed with status code 404"
+    },
+    {
+      "page": "Unknown top-level route",
+      "type": "console-warning",
+      "text": "No routes matched location \"/this-route-does-not-exist\" "
+    },
+    {
+      "page": "Unknown top-level route",
+      "type": "console-warning",
+      "text": "No routes matched location \"/this-route-does-not-exist\" "
+    }
+  ],
+  "downloads": []
 }

@@ -8,7 +8,7 @@ minimizing transport costs (distance + district/state penalties).
 """
 import pulp
 
-from app.services import store
+from app.services import store, worker_pool
 from app.services.forecasting import forecast_all, forecast_medicine
 from app.services.geo import haversine_km as _haversine_km
 
@@ -19,10 +19,44 @@ MAX_DONOR_LOAD = 2.0  # a facility may donate at most this many "full medicines'
 # recommended to donate in one pass — see _apply_cross_medicine_donor_cap
 
 
-def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -> list[dict]:
-    """``forecasts`` lets a caller supply an alternative forecast set (e.g. the
-    weather scenario in ``weather_impact``); by default the live forecasts are used."""
-    forecasts = [f for f in (forecasts if forecasts is not None else forecast_all()) if f["medicine"] == medicine]
+def _facility_snapshot() -> dict[str, dict]:
+    """Plain, picklable {phc_id: {name, state, district, lat, lon}} — the only
+    facility fields ``_solve_medicine`` needs. Read once per ``recommend_all``
+    call and handed to every worker, instead of each worker importing
+    ``store`` itself (see ``_solve_medicine``'s docstring for why)."""
+    return {
+        pid: {"name": p["name"], "state": p["state"], "district": p["district"], "lat": p["lat"], "lon": p["lon"]}
+        for pid, p in store.PHC_BY_ID.items()
+    }
+
+
+def _stock_meta_snapshot(medicine: str) -> dict[str, dict]:
+    """{phc_id: {capacity, reorder_level}} for one resource — the only
+    STOCK_HISTORY fields ``_solve_medicine`` needs, besides what's already on
+    each forecast dict."""
+    out = {}
+    for pid, meds in store.STOCK_HISTORY.items():
+        rec = meds.get(medicine)
+        if rec is not None:
+            out[pid] = {"capacity": rec["capacity"], "reorder_level": rec["reorder_level"]}
+    return out
+
+
+def _solve_medicine(
+    medicine: str,
+    forecasts: list[dict],
+    facilities: dict[str, dict],
+    stock_meta: dict[str, dict],
+    tier: int,
+) -> list[dict]:
+    """The actual LP build-and-solve, as a free function over plain data only
+    (no ``store`` import) so it can run in a worker process: ``ProcessPoolExecutor``
+    pickles its arguments and re-imports this module in each worker, but that
+    worker never re-loads ``store`` (which would re-read every generated JSON
+    file per call) or risks seeing it mid-mutation from a transfer/crisis in
+    the parent process — everything it needs arrives as an argument, snapshotted
+    once by the caller. Kept at module level (not nested) because only a
+    module-level function is picklable."""
     deficits = [f for f in forecasts if f["risk"] in ("critical", "warning") and not f.get("cold_chain_alert")]
     surplus = []
 
@@ -32,8 +66,10 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
             if f["current_level"] > 0.05:
                 surplus.append({**f, "spare_units": round(f["current_level"], 1)})
         else:
-            rec = store.STOCK_HISTORY[f["phc_id"]][medicine]
-            spare = f["current_level"] - rec["capacity"] * MIN_SPARE_FRACTION
+            meta = stock_meta.get(f["phc_id"])
+            if meta is None:
+                continue
+            spare = f["current_level"] - meta["capacity"] * MIN_SPARE_FRACTION
             if (f["days_to_stockout"] is None or f["days_to_stockout"] >= SURPLUS_MARGIN_DAYS) and spare > 0:
                 surplus.append({**f, "spare_units": round(spare, 1)})
 
@@ -55,8 +91,8 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
     unmet = {}
     needed_vals = {}
     for d_idx, d in enumerate(deficits):
-        rec = store.STOCK_HISTORY[d["phc_id"]][medicine]
-        needed = max(0.0, rec["reorder_level"] * 1.5 - d["current_level"])
+        meta = stock_meta[d["phc_id"]]
+        needed = max(0.0, meta["reorder_level"] * 1.5 - d["current_level"])
         needed_vals[d_idx] = needed
         unmet[d_idx] = pulp.LpVariable(
             f"unmet_{d_idx}", lowBound=0, cat=pulp.LpContinuous
@@ -71,12 +107,10 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
     for d_idx, _d in enumerate(deficits):
         prob += pulp.lpSum(x[(s_idx, d_idx)] for s_idx in range(len(surplus))) + unmet[d_idx] == needed_vals[d_idx], f"Recipient_Need_{d_idx}"
 
-    # Look up the resource's tier and calculate per-facility urgency weights to
-    # prioritize critical, high-tier shortages. Tier comes from the resource
-    # registry, so a non-medicine resource (blood, oxygen) is prioritised by
+    # Per-facility urgency weights prioritize critical, high-tier shortages.
+    # Tier comes from the resource registry (passed in, looked up once by the
+    # caller), so a non-medicine resource (blood, oxygen) is prioritised by
     # the same rule without a special case here.
-    resource = store.resource_type(medicine)
-    tier = resource.tier if resource else 3
     base_unmet_penalty = 100000.0
     tier_weight = {1: 3.0, 2: 2.0, 3: 1.0}[tier]
 
@@ -84,14 +118,12 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
     for d_idx, d in enumerate(deficits):
         risk_weight = 2.0 if d["risk"] == "critical" else 1.0
         weight[d_idx] = base_unmet_penalty * tier_weight * risk_weight
-        d_phc = store.PHC_BY_ID[d["phc_id"]]
-        print(f"[OPTIMIZER] Medicine: {medicine} (Tier {tier}) | Facility: {d_phc['name']} (Risk: {d['risk']}) -> unmet_penalty: {weight[d_idx]}")
 
     cost_terms = []
     for s_idx, s in enumerate(surplus):
-        s_phc = store.PHC_BY_ID[s["phc_id"]]
+        s_phc = facilities[s["phc_id"]]
         for d_idx, d in enumerate(deficits):
-            d_phc = store.PHC_BY_ID[d["phc_id"]]
+            d_phc = facilities[d["phc_id"]]
             dist = _haversine_km(s_phc, d_phc)
             cross_district = s_phc["district"] != d_phc["district"]
             cross_state = s_phc["state"] != d_phc["state"]
@@ -110,9 +142,9 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
 
     recommendations = []
     for s_idx, s in enumerate(surplus):
-        s_phc = store.PHC_BY_ID[s["phc_id"]]
+        s_phc = facilities[s["phc_id"]]
         for d_idx, d in enumerate(deficits):
-            d_phc = store.PHC_BY_ID[d["phc_id"]]
+            d_phc = facilities[d["phc_id"]]
             val = x[(s_idx, d_idx)].varValue
             if val and val > 0.05:
                 val = round(val, 1)
@@ -135,6 +167,18 @@ def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -
                 })
 
     return recommendations
+
+
+def recommend_for_medicine(medicine: str, forecasts: list[dict] | None = None) -> list[dict]:
+    """Single-process convenience wrapper over ``_solve_medicine``, reading
+    directly from live ``store`` — used by callers outside the parallel
+    ``recommend_all`` path (weather scenarios, tests). ``forecasts`` lets a
+    caller supply an alternative forecast set (e.g. the weather scenario in
+    ``weather_impact``); by default the live forecasts are used."""
+    forecasts = [f for f in (forecasts if forecasts is not None else forecast_all()) if f["medicine"] == medicine]
+    resource = store.resource_type(medicine)
+    tier = resource.tier if resource else 3
+    return _solve_medicine(medicine, forecasts, _facility_snapshot(), _stock_meta_snapshot(medicine), tier)
 
 
 def _greedy_transport(deficits: list[dict], surplus: list[dict]) -> list[dict]:
@@ -324,11 +368,30 @@ def _apply_cross_medicine_donor_cap(recs: list[dict]) -> list[dict]:
 
 
 def recommend_all(state: str | None = None, forecasts: list[dict] | None = None) -> list[dict]:
-    out = []
-    # Every tracked resource, not just medicines — adding a resource type to
-    # the registry is enough for it to start being redistributed.
-    for resource_key in store.resource_stock_keys():
-        out.extend(recommend_for_medicine(resource_key, forecasts))
+    # Each tracked resource (not just medicines — adding one to the registry is
+    # enough for it to start being redistributed) gets its own independent LP.
+    # Building + solving one is roughly half CBC-subprocess-wait and half
+    # genuine Python work (pulp's expression construction over ~2-3k terms per
+    # medicine) — the CPU half is bound by the GIL, so a thread pool alone
+    # only cut the I/O half. Running each medicine's solve in its own process
+    # parallelises both halves (measured ~650ms serial -> ~150-250ms for the
+    # full ~14-resource network). Workers get a plain-data snapshot rather
+    # than importing `store`, so they never re-read the generated JSON files
+    # per call and can't see it mid-mutation from a transfer/crisis in this
+    # process — see `_solve_medicine`'s docstring.
+    if forecasts is None:
+        forecasts = forecast_all()
+    resource_keys = store.resource_stock_keys()
+    facilities = _facility_snapshot()
+    forecasts_by_resource = {rk: [f for f in forecasts if f["medicine"] == rk] for rk in resource_keys}
+    stock_meta_by_resource = {rk: _stock_meta_snapshot(rk) for rk in resource_keys}
+    tier_by_resource = {rk: (store.resource_type(rk).tier if store.resource_type(rk) else 3) for rk in resource_keys}
+
+    futures = worker_pool.map_unordered(
+        _solve_medicine,
+        [(rk, forecasts_by_resource[rk], facilities, stock_meta_by_resource[rk], tier_by_resource[rk]) for rk in resource_keys],
+    )
+    out = [r for fut in futures for r in fut.result()]
     out = _apply_cross_medicine_donor_cap(out)
     if state:
         out = [r for r in out if r["from_state"] == state or r["to_state"] == state]

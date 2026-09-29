@@ -27,11 +27,23 @@ from app.routers import (
     transfers,
 )
 from app.services import auth as auth_service
-from app.services import signal_alerts
+from app.services import forecasting, signal_alerts, worker_pool
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Warm the shared solver/forecast pool (services/worker_pool.py) now, not
+    # on the first request: its workers are separate processes that each
+    # re-import the app (reloading the generated dataset) before they can do
+    # anything, which would otherwise land on whichever user's request
+    # happens to be first. Then run the national forecast once — the single
+    # most expensive uncached call in the app (~1.9k Holt's-smoothing fits) —
+    # so it's already cached by the time any request needs it, and dispatches
+    # across the now-warm workers rather than paying process-spawn too. Off
+    # the event loop thread since both block for the full warmup.
+    await asyncio.to_thread(worker_pool.warm_pool)
+    await asyncio.to_thread(forecasting.forecast_all)
+
     # Background check for real weather signals turning high (see services/signal_alerts.py).
     poller = None
     if settings.signal_polling_enabled and settings.live_data_enabled:
@@ -39,6 +51,9 @@ async def lifespan(_: FastAPI):
     yield
     if poller:
         poller.cancel()
+    # Shut down the shared solver/forecast pool so worker processes don't
+    # outlive a graceful stop/reload.
+    worker_pool.shutdown_pool()
 
 
 app = FastAPI(

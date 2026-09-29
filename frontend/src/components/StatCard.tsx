@@ -9,6 +9,8 @@ interface Props {
   icon?: LucideIcon;
   /** Ring that pings around the icon, for a tile that needs attention. */
   pulse?: boolean;
+  /** Change since a reference point (e.g. before a crisis simulation). Hidden when 0. */
+  delta?: { value: number; suffix?: string; worseWhen: "up" | "down"; label?: string };
 }
 
 const toneClasses: Record<string, string> = {
@@ -32,7 +34,7 @@ const iconTint: Record<string, string> = {
   good: "bg-emerald-50 text-emerald-600",
 };
 
-export default function StatCard({ label, value, tone = "default", thousands = false, icon: Icon, pulse = false }: Props) {
+export default function StatCard({ label, value, tone = "default", thousands = false, icon: Icon, pulse = false, delta }: Props) {
   const animatedValue = useCountUp(value, 1100, thousands);
   return (
     <div className="card card-lift relative overflow-hidden p-4">
@@ -46,7 +48,24 @@ export default function StatCard({ label, value, tone = "default", thousands = f
           </span>
         )}
       </div>
-      <div className={`mt-2 text-3xl font-bold tabular-nums ${toneClasses[tone]}`}>{animatedValue}</div>
+      {/* text-2xl on narrow screens: a `thousands`-formatted value like
+          population_served ("4,601,642") crowds a 2-col mobile grid card at
+          text-3xl; sm: restores the larger size where there's more room. */}
+      <div className={`mt-2 text-2xl font-bold tabular-nums sm:text-3xl ${toneClasses[tone]}`}>{animatedValue}</div>
+      {delta && delta.value !== 0 && (() => {
+        const worse = (delta.value > 0) === (delta.worseWhen === "up");
+        return (
+          <div
+            key={delta.value}
+            className={`change-flash mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+              worse ? "text-rose-700 ring-1 ring-rose-200" : "text-emerald-700 ring-1 ring-emerald-200"
+            }`}
+          >
+            {delta.value > 0 ? "▲ +" : "▼ −"}{Math.abs(delta.value).toLocaleString()}{delta.suffix ?? ""}
+            <span className="font-medium text-slate-500">{delta.label ?? "vs. before simulation"}</span>
+          </div>
+        );
+      })()}
     </div>
   );
 }

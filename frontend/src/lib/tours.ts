@@ -48,6 +48,13 @@ const dashboard: TourDef = {
       placement: "bottom",
     },
     {
+      target: "#crisis-intensity",
+      title: "Control how severe",
+      content:
+        "Mild, Moderate or Severe scales the same simulation up or down — a mild run leaves real stock behind and hits facilities unevenly, a severe one is closer to worst-case. Hover the hint text to see the assumption behind it.",
+      placement: "top",
+    },
+    {
       target: "#stat-cards",
       title: "Live network vitals",
       content:
@@ -55,24 +62,10 @@ const dashboard: TourDef = {
       placement: "bottom",
     },
     {
-      target: "#live-signals",
-      title: "Real weather, real signals",
+      target: "#crisis-impact-link",
+      title: "Exactly what the simulation changed",
       content:
-        "Actual 7-day forecasts for each state, turned into signals for heavy rain, mosquito-borne conditions and cold-chain heat stress. Press Simulate on a signal to load it into the crisis simulator.",
-      placement: "top",
-    },
-    {
-      target: "#weather-impact",
-      title: "What if the weather turns into demand?",
-      content:
-        "Applies stated planning assumptions to the real forecast and shows where supply would run short first. Drag the strength slider, or switch on the option to re-plan the alerts and recommendations below. Stored data never changes.",
-      placement: "top",
-    },
-    {
-      target: "#sdg-panel",
-      title: "Impact against SDG 3.8",
-      content:
-        "Estimates of facilities at risk, patients potentially affected, and stockout-days that pending transfers could prevent, tied to Universal Health Coverage.",
+        "After a simulated crisis, every value it rewrote — stock, beds, OPD visits or fridge temperature — is on Insights, crossed-out before and highlighted after, with the risk change. The vitals above show the same shift network-wide.",
       placement: "top",
     },
     {
@@ -103,13 +96,6 @@ const dashboard: TourDef = {
       placement: "top",
     },
     {
-      target: "#anomaly-panel",
-      title: "Consumption integrity",
-      content:
-        "Medicine drawdown is reconciled against patient footfall. Facilities that are outliers are flagged as possible over-consumption or under-reporting.",
-      placement: "top",
-    },
-    {
       target: "#notification-bell",
       title: "Alerts when real signals turn high",
       content:
@@ -117,17 +103,24 @@ const dashboard: TourDef = {
       placement: "bottom",
     },
     {
+      target: 'a[href="/insights"]',
+      title: "Insights",
+      content:
+        "Scenario tools and secondary signals live here: what a simulated crisis changed, real weather turned into a demand scenario, consumption anomalies, bed/staff capacity redistribution, and the medicines reference.",
+      placement: "right",
+    },
+    {
       target: 'a[href="/federated"]',
       title: "Federated Network",
       content:
         "See how states, and simulated BRICS partners, share only aggregated statistics, never raw facility data.",
-      placement: "bottom",
+      placement: "right",
     },
     {
       target: 'a[href="/assistant"]',
       title: "Ask the Assistant",
       content: "Natural-language questions about stock, beds and redistribution, in English, Hindi, Marathi or Tamil.",
-      placement: "bottom",
+      placement: "right",
     },
   ],
 };
@@ -223,6 +216,60 @@ const medicineState: TourDef = {
       content:
         "Once you pick a facility, its stock history, forecast, bed occupancy and staff attendance charts appear here.",
       placement: "left",
+    },
+  ],
+};
+
+const insights: TourDef = {
+  id: "insights",
+  name: "Insights tour",
+  steps: [
+    {
+      target: "#insights-header",
+      title: "Scenario tools and secondary signals",
+      content:
+        "Everything here is supplementary to the Dashboard's daily triage: crisis-simulation history, real-data scenario tools, and secondary operational signals.",
+      placement: "bottom",
+    },
+    {
+      target: "#crisis-impact",
+      title: "Exactly what a simulation changed",
+      content:
+        "After a simulated crisis on the Dashboard, every value it rewrote is listed here: stock, beds, OPD visits or fridge temperature, crossed-out before and highlighted after, with the risk change.",
+      placement: "top",
+    },
+    {
+      target: "#live-signals",
+      title: "Real weather, real signals",
+      content:
+        "Actual 7-day forecasts for each state, turned into signals for heavy rain, mosquito-borne conditions and cold-chain heat stress. Press Simulate to jump to the Dashboard's crisis simulator with it pre-filled.",
+      placement: "top",
+    },
+    {
+      target: "#weather-impact",
+      title: "What if the weather turns into demand?",
+      content:
+        "Applies stated planning assumptions to the real forecast and shows where supply would run short first. Drag the strength slider — stored data never changes.",
+      placement: "top",
+    },
+    {
+      target: "#anomaly-panel",
+      title: "Consumption integrity",
+      content:
+        "Medicine drawdown is reconciled against patient footfall. Facilities that are outliers are flagged as possible over-consumption or under-reporting.",
+      placement: "top",
+    },
+    {
+      target: "#capacity-panel",
+      title: "Beds and staff, not just medicine",
+      content: "The same redistribution logic applied to bed overflow and staff shortages across nearby facilities.",
+      placement: "top",
+    },
+    {
+      target: "#medicines-panel",
+      title: "Medicines reference",
+      content: "Every tracked medicine's tier and category. Expand one to see its stock aggregated by state.",
+      placement: "top",
     },
   ],
 };
@@ -448,6 +495,7 @@ const publicState: TourDef = {
 // Most specific patterns first; every pattern is matched with end: true.
 const ROUTES: { path: string; tour: TourDef }[] = [
   { path: "/", tour: dashboard },
+  { path: "/insights", tour: insights },
   { path: "/states/:state", tour: stateView },
   { path: "/phcs/:id", tour: phcDetail },
   { path: "/medicines/:medicine/states/:state", tour: medicineState },

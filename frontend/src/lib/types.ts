@@ -147,6 +147,51 @@ export interface ActiveCrisis {
   target_type: string;
   target_name: string;
   crisis_type: string;
+  /** 1.0 = a typical instance of the crisis type; absent on a crisis rehydrated
+   * after a backend restart (services/db.py's crisis_log has no intensity column). */
+  intensity?: number;
+}
+
+/** services/store.py CRISIS_SEVERITY + the allowed intensity range, from /api/crisis/severity. */
+export interface CrisisSeverity {
+  severity: Record<string, { stock_fraction: number; bed_fraction: number; footfall_multiplier: number; why: string }>;
+  intensity_min: number;
+  intensity_max: number;
+}
+
+/** One value a simulated crisis changed, before and after (services/store.py `_crisis_impact`). */
+export interface CrisisChange {
+  phc_id: string;
+  phc_name: string;
+  district: string;
+  state: string;
+  kind: "stock" | "beds" | "footfall" | "temperature";
+  item: string;
+  unit: string;
+  before: number;
+  after: number;
+  capacity?: number;
+  risk_before?: Risk;
+  risk_after?: Risk;
+  days_before?: number | null;
+  days_after?: number | null;
+}
+
+export interface CrisisImpact extends ActiveCrisis {
+  simulated: true;
+  triggered_at: string;
+  totals: {
+    facilities_affected: number;
+    stock_items_changed: number;
+    stock_units_lost: number;
+    newly_critical: number;
+    risk_escalations: number;
+    beds_newly_occupied: number;
+    extra_opd_visits: number;
+    cold_chain_alerts_raised: number;
+  };
+  rows_total: number;
+  changes: CrisisChange[];
 }
 
 export interface AnomalyContribution {
@@ -220,6 +265,15 @@ export interface AuditEvent {
   ts: string;
   kind: string;
   summary: string;
+}
+
+// A facility the assistant's context was built from and that its reply (or
+// the question itself) actually named — see assistant.py's
+// _related_facilities. Never a claim the model made up; only ever a
+// facility this service already knew about and could match by name.
+export interface RelatedFacility {
+  phc_id: string;
+  phc_name: string;
 }
 
 export interface ActingUser {

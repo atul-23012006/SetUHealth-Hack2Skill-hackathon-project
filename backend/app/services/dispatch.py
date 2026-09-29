@@ -91,6 +91,8 @@ class SimulatedGroundCourierProvider(LogisticsProvider):
                 "distance_km": transfer.distance_km,
                 "eta_minutes": eta_minutes,
             },
+            from_phc_id=transfer.origin_facility_id,
+            to_phc_id=transfer.destination_facility_id,
         )
 
         return DispatchResult(

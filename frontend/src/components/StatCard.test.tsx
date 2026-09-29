@@ -44,4 +44,16 @@ describe('StatCard', () => {
     settle()
     expect(screen.getByText('5')).toHaveClass('text-rose-600')
   })
+
+  it('shows a delta chip coloured by whether the change is worse, and none for zero', () => {
+    const { rerender } = render(<StatCard label="Critical" value={50} delta={{ value: 12, worseWhen: 'up' }} />)
+    const chip = screen.getByText(/\+12/)
+    expect(chip.className).toMatch(/rose/)
+    expect(screen.getByText(/vs\. before simulation/)).toBeInTheDocument()
+    rerender(<StatCard label="Attendance" value={80} delta={{ value: 3, worseWhen: 'down', suffix: ' pts' }} />)
+    expect(screen.getByText(/\+3 pts/).className).toMatch(/emerald/)
+    rerender(<StatCard label="Critical" value={50} delta={{ value: 0, worseWhen: 'up' }} />)
+    expect(screen.queryByText(/vs\. before simulation/)).not.toBeInTheDocument()
+  })
 })
+

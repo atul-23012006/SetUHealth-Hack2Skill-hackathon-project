@@ -1,32 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import axios from "axios";
 import {
   WifiOff, Play, Square, AlertTriangle, FlaskConical, Waves, Bug, Microscope,
-  Snowflake, Loader2, RotateCcw, Globe, Brain, Search, Building2, ExternalLink,
+  Snowflake, Loader2, RotateCcw, Brain, Building2,
   BedDouble, UserCheck, BellRing,
 } from "lucide-react";
 import { api } from "../lib/api";
-import { useCountUp } from "../lib/useCountUp";
 import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
-import type {
-  PHC, Forecast, RedistributionRec, Risk, ActiveCrisis,
-  ConsumptionAnomaly, CapacityRecommendations,
-} from "../lib/types";
+import type { PHC, Forecast, RedistributionRec, Risk, ActiveCrisis, CrisisImpact, CrisisSeverity, Medicine } from "../lib/types";
 import StatCard from "../components/StatCard";
 import IndiaMap from "../components/IndiaMap";
 import AlertsList from "../components/AlertsList";
 import RedistributionList from "../components/RedistributionList";
 import CountdownClock from "../components/CountdownClock";
-import AnomalyList from "../components/AnomalyList";
-import CapacityRedistributionList from "../components/CapacityRedistributionList";
-import LiveSignalsPanel from "../components/LiveSignalsPanel";
-import WeatherImpactPanel from "../components/WeatherImpactPanel";
 
-// Animated number for panels that are not StatCards.
-function CountUp({ value, thousands = false }: { value: string | number; thousands?: boolean }) {
-  return <>{useCountUp(value, 1200, thousands)}</>;
-}
+// Network vitals captured just before the first simulated crisis, so the stat
+// cards can show exactly how far the simulation moved them.
+type Kpis = { critical: number; warning: number; avgBeds: number; avgAttendance: number };
 
 const riskRank: Record<Risk, number> = { critical: 2, warning: 1, low: 0 };
 
@@ -41,6 +33,15 @@ function CrisisTypeIcon({ type, size, className }: { type: string; size: number;
   const Icon = CRISIS_TYPE_ICONS[type] ?? AlertTriangle;
   return <Icon size={size} className={className} />;
 }
+
+// Named points on the backend's continuous intensity scale (services/store.py
+// INTENSITY_MIN..MAX = 0.25..2.0). A discrete Mild/Moderate/Severe choice is
+// easier to reason about than a raw multiplier, without adding any new API.
+const SEVERITY_LEVELS = [
+  { label: "Mild", value: 0.5 },
+  { label: "Moderate", value: 1.0 },
+  { label: "Severe", value: 1.75 },
+];
 
 const DEMO_STEPS = [
   { label: "1/5 — Resetting simulation to baseline..." },
@@ -58,18 +59,11 @@ export default function Dashboard() {
   const [recs, setRecs] = useState<RedistributionRec[]>([]);
   const [stateList, setStateList] = useState<Record<string, string[]>>({});
   const [activeCrises, setActiveCrises] = useState<ActiveCrisis[]>([]);
-  const [medicines, setMedicines] = useState<any[]>([]);
-  const [anomalies, setAnomalies] = useState<ConsumptionAnomaly[]>([]);
-  const [capacity, setCapacity] = useState<CapacityRecommendations | null>(null);
+  const [crisisImpacts, setCrisisImpacts] = useState<CrisisImpact[]>([]);
+  const [kpiBaseline, setKpiBaseline] = useState<Kpis | null>(null);
+  const kpiRef = useRef<Kpis>({ critical: 0, warning: 0, avgBeds: 0, avgAttendance: 0 });
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Weather scenario: when on, alerts and recommendations are planned against the
-  // real weather outlook. Read through a ref so loadData keeps a stable identity.
-  const [weatherAdjusted, setWeatherAdjusted] = useState(false);
-  const [weatherIntensity, setWeatherIntensity] = useState(1);
-  const scenarioRef = useRef<{ intensity: number } | undefined>(undefined);
-  scenarioRef.current = weatherAdjusted ? { intensity: weatherIntensity } : undefined;
-  const [scenarioError, setScenarioError] = useState(false);
 
   // Online status tracking
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -97,30 +91,29 @@ export default function Dashboard() {
     };
   }, []);
 
-  const [expandedMeds, setExpandedMeds] = useState<Record<string, boolean>>({});
-  const navigate = useNavigate();
-
   const [targetType, setTargetType] = useState<"state" | "district">("district");
   const [selectedState, setSelectedState] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [crisisType, setCrisisType] = useState("Monsoon Floods");
+  const [crisisIntensity, setCrisisIntensity] = useState(1);
+  const [crisisSeverity, setCrisisSeverity] = useState<CrisisSeverity | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => { api.crisisSeverity().then(setCrisisSeverity).catch(() => {}); }, []);
 
   const loadData = useCallback((showLoading = false) => {
     if (showLoading) setLoading(true);
     Promise.all([
       api.phcs(),
       api.forecastAll(),
-      // A failing scenario (weather feed down) falls back to the baseline instead of blanking the page.
-      api.alerts(undefined, 8, scenarioRef.current).catch(() => { setScenarioError(true); return api.alerts(undefined, 8); }),
-      api.redistribution(undefined, undefined, undefined, scenarioRef.current).catch(() => { setScenarioError(true); return api.redistribution(); }),
+      api.alerts(undefined, 8),
+      api.redistribution(),
       api.states(),
       api.activeCrises(),
       api.medicines(),
-      api.anomalies(),
-      api.capacityRedistribution(),
+      api.crisisImpacts().catch(() => [] as CrisisImpact[]),
     ])
-      .then(([p, f, a, r, s, ac, m, an, cap]) => {
+      .then(([p, f, a, r, s, ac, m, ci]) => {
         setPhcs(p);
         setForecasts(f);
         setAlerts(a);
@@ -128,8 +121,9 @@ export default function Dashboard() {
         setStateList(s);
         setActiveCrises(ac);
         setMedicines(m || []);
-        setAnomalies(an || []);
-        setCapacity(cap || null);
+        setCrisisImpacts(ci);
+        // Crises cleared elsewhere (another tab, a restart): drop the stale baseline.
+        if (ac.length === 0 && ci.length === 0) setKpiBaseline(null);
 
         const statesKeys = Object.keys(s);
         if (statesKeys.length > 0) {
@@ -148,16 +142,6 @@ export default function Dashboard() {
   }, [selectedState]);
 
   useEffect(() => { loadData(true); }, []);
-
-  // Re-plan when the scenario switch or its strength changes (skipping the first render).
-  const scenarioMounted = useRef(false);
-  useEffect(() => {
-    if (!scenarioMounted.current) { scenarioMounted.current = true; return; }
-    setScenarioError(false);
-    const id = setTimeout(() => loadData(false), 450);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weatherAdjusted, weatherIntensity]);
 
   // Auto-poll active crises every 5 seconds while a crisis is running
   useEffect(() => {
@@ -198,43 +182,6 @@ export default function Dashboard() {
     });
   }, [stateList, phcs, riskByPhc]);
 
-  const medStateAggregates = useMemo(() => {
-    const map: Record<
-      string,
-      Record<string, { total_current: number; total_capacity: number; criticalCount: number; warningCount: number; phcCount: number }>
-    > = {};
-    for (const f of forecasts) {
-      const m = f.medicine;
-      const st = f.state || "";
-      if (!map[m]) map[m] = {};
-      if (!map[m][st]) map[m][st] = { total_current: 0, total_capacity: 0, criticalCount: 0, warningCount: 0, phcCount: 0 };
-      map[m][st].total_current += f.current_level ?? 0;
-      map[m][st].total_capacity += f.capacity ?? 0;
-      map[m][st].phcCount += 1;
-      if (f.risk === "critical") map[m][st].criticalCount += 1;
-      if (f.risk === "warning") map[m][st].warningCount += 1;
-    }
-    return map;
-  }, [forecasts]);
-
-  // SDG 3.8 Impact Metrics — computed from live forecast + redistribution data
-  const sdgMetrics = useMemo(() => {
-    const criticalPhcSet = new Set(forecasts.filter((f) => f.risk === "critical").map((f) => f.phc_id));
-    const urgentRecs = recs.filter((r) => r.urgency === "critical" || r.urgency === "warning");
-    const stockoutDaysPrevented = urgentRecs.reduce((sum, r) => {
-      const recipForecast = forecasts.find((f) => f.phc_id === r.to_phc_id && f.medicine === r.medicine);
-      return sum + (recipForecast?.days_to_stockout ?? 0);
-    }, 0);
-    const patientsAtRisk = criticalPhcSet.size * 2000;
-    const coverageScore = phcs.length > 0 ? Math.round((1 - criticalPhcSet.size / phcs.length) * 100) : 100;
-    return {
-      criticalPhcs: criticalPhcSet.size,
-      stockoutDaysPrevented: Math.round(stockoutDaysPrevented),
-      patientsAtRisk,
-      coverageScore,
-    };
-  }, [forecasts, recs, phcs]);
-
   // Top 3 most urgent countdown alerts
   const topAlerts = useMemo(() => {
     return [...alerts]
@@ -243,35 +190,38 @@ export default function Dashboard() {
       .slice(0, 3);
   }, [alerts]);
 
-  const handleToggleMed = (name: string) => {
-    setExpandedMeds((s) => ({ ...s, [name]: !s[name] }));
-  };
-
-  const openStateModal = (medicine: string, state: string) => {
-    navigate(`/medicines/${encodeURIComponent(medicine)}/states/${encodeURIComponent(state)}`);
-  };
-
-  // Real weather signal -> pre-fill the crisis simulator (never runs it).
+  // A real weather signal picked on Insights' Live Signals panel arrives here
+  // as ?simState=&simCrisis= (that panel has no simulator of its own — see
+  // Insights.tsx) and pre-fills the Crisis Simulator below, never running it.
   const [simFlash, setSimFlash] = useState(false);
-  const loadSignalIntoSimulator = (state: string, crisis: string) => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const simState = params.get("simState");
+    const simCrisis = params.get("simCrisis");
+    if (!simState || !simCrisis) return;
     setTargetType("state");
-    setSelectedState(state);
-    setCrisisType(crisis);
+    setSelectedState(simState);
+    setCrisisType(simCrisis);
+    window.history.replaceState(null, "", window.location.pathname);
     document.getElementById("crisis-simulator")?.scrollIntoView({ behavior: "smooth", block: "center" });
     setSimFlash(true);
     setTimeout(() => setSimFlash(false), 2400);
-  };
+  }, []);
 
   const handleTriggerCrisis = async () => {
     const targetName = targetType === "state" ? selectedState : selectedDistrict;
     if (!targetName) return;
     setActionLoading(true);
+    // Keep the baseline from before the *first* crisis, so stacked crises add up.
+    setKpiBaseline((b) => b ?? { ...kpiRef.current });
     try {
-      await api.triggerCrisis(targetType, targetName, crisisType);
+      await api.triggerCrisis(targetType, targetName, crisisType, crisisIntensity);
       loadData(false);
+      document.getElementById("stat-cards")?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       console.error(err);
-      alert("Failed to trigger crisis.");
+      const detail = axios.isAxiosError(err) ? err.response?.data?.detail : undefined;
+      alert(detail || "Failed to trigger crisis.");
     } finally {
       setActionLoading(false);
     }
@@ -281,6 +231,8 @@ export default function Dashboard() {
     setActionLoading(true);
     try {
       await api.resetCrisis();
+      setKpiBaseline(null);
+      setCrisisImpacts([]);
       loadData(false);
     } catch (err) {
       console.error(err);
@@ -309,11 +261,14 @@ export default function Dashboard() {
 
     try {
       // Step 0: Reset to clean state
-      await step(0, () => api.resetCrisis().then(() => loadData(false)), 0);
+      await step(0, () => api.resetCrisis().then(() => { setKpiBaseline(null); setCrisisImpacts([]); loadData(false); }), 0);
       await sleep(2000);
 
       // Step 1: Trigger Monsoon Floods in Bihar
-      await step(1, () => api.triggerCrisis("state", "Bihar", "Monsoon Floods").then(() => loadData(false)), 1500);
+      await step(1, () => {
+        setKpiBaseline({ ...kpiRef.current });
+        return api.triggerCrisis("state", "Bihar", "Monsoon Floods").then(() => loadData(false));
+      }, 1500);
       await sleep(2500);
 
       // Step 2: Show forecast updating
@@ -359,6 +314,9 @@ export default function Dashboard() {
   const avgAttendance = phcs.length
     ? Math.round(phcs.reduce((s, p) => s + (p.attendance_pct ?? 0), 0) / phcs.length)
     : 0;
+  kpiRef.current = { critical: criticalCount, warning: warningCount, avgBeds, avgAttendance };
+  const delta = (key: keyof Kpis, worseWhen: "up" | "down", suffix?: string) =>
+    kpiBaseline ? { value: kpiRef.current[key] - kpiBaseline[key], worseWhen, suffix } : undefined;
 
   if (loading) return <PageLoader label={t("loading")} />;
 
@@ -517,140 +475,138 @@ export default function Dashboard() {
           <div className="font-semibold text-slate-800 flex items-center gap-1.5">
             <FlaskConical size={16} /> {t("crisisSimulator")}
           </div>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 max-w-md">
             Inject a health emergency to see forecasts flip critical, stockouts accelerate, and redistribution recompute live.
+            {" "}Severity scales realistically — a mild simulation leaves real stock behind; facilities are affected unevenly, not identically.
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={targetType}
-            onChange={(e) => setTargetType(e.target.value as "state" | "district")}
-            className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium"
-          >
-            <option value="district">{t("district")}</option>
-            <option value="state">{t("states")}</option>
-          </select>
-
-          <select
-            value={selectedState}
-            onChange={(e) => setSelectedState(e.target.value)}
-            className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium"
-          >
-            {Object.keys(stateList).map((st) => (
-              <option key={st} value={st}>{st}</option>
-            ))}
-          </select>
-
-          {targetType === "district" && selectedState && stateList[selectedState] && (
+        <div className="flex flex-col items-stretch md:items-end gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
-              value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
+              value={targetType}
+              onChange={(e) => setTargetType(e.target.value as "state" | "district")}
               className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium"
             >
-              {(stateList[selectedState] || []).map((dst) => (
-                <option key={dst} value={dst}>{dst}</option>
+              <option value="district">{t("district")}</option>
+              <option value="state">{t("states")}</option>
+            </select>
+
+            <select
+              value={selectedState}
+              onChange={(e) => setSelectedState(e.target.value)}
+              className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium"
+            >
+              {Object.keys(stateList).map((st) => (
+                <option key={st} value={st}>{st}</option>
               ))}
             </select>
-          )}
 
-          <div className="flex items-center gap-1.5 border border-slate-300 rounded-md bg-white pl-2">
-            <CrisisTypeIcon type={crisisType} size={14} className="text-rose-600 shrink-0" />
-            <select
-              value={crisisType}
-              onChange={(e) => setCrisisType(e.target.value)}
-              className="text-xs py-1.5 pr-2 bg-transparent font-medium text-rose-700 border-none focus:outline-none"
+            {targetType === "district" && selectedState && stateList[selectedState] && (
+              <select
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                className="border border-slate-300 rounded-md text-xs px-2 py-1.5 bg-white font-medium"
+              >
+                {(stateList[selectedState] || []).map((dst) => (
+                  <option key={dst} value={dst}>{dst}</option>
+                ))}
+              </select>
+            )}
+
+            <div className="flex items-center gap-1.5 border border-slate-300 rounded-md bg-white pl-2">
+              <CrisisTypeIcon type={crisisType} size={14} className="text-rose-600 shrink-0" />
+              <select
+                value={crisisType}
+                onChange={(e) => setCrisisType(e.target.value)}
+                className="text-xs py-1.5 pr-2 bg-transparent font-medium text-rose-700 border-none focus:outline-none"
+              >
+                <option value="Monsoon Floods">Monsoon Floods</option>
+                <option value="Dengue Outbreak">Dengue Outbreak</option>
+                <option value="Malaria Outbreak">Malaria Outbreak</option>
+                <option value="Cold Chain Failure">Cold Chain Failure</option>
+              </select>
+            </div>
+
+            <button
+              id="trigger-crisis-btn"
+              onClick={handleTriggerCrisis}
+              disabled={actionLoading}
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer disabled:opacity-50 shadow-sm transition-all flex items-center gap-1.5"
             >
-              <option value="Monsoon Floods">Monsoon Floods</option>
-              <option value="Dengue Outbreak">Dengue Outbreak</option>
-              <option value="Malaria Outbreak">Malaria Outbreak</option>
-              <option value="Cold Chain Failure">Cold Chain Failure</option>
-            </select>
+              {actionLoading ? (<><Loader2 size={14} className="animate-spin" /> Triggering...</>) : (<><AlertTriangle size={14} /> Simulate Outbreak</>)}
+            </button>
+
+            {activeCrises.length > 0 && (
+              <button
+                onClick={handleReset}
+                disabled={actionLoading}
+                className="bg-slate-600 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md cursor-pointer disabled:opacity-50"
+              >
+                {t("reset")}
+              </button>
+            )}
           </div>
 
-          <button
-            id="trigger-crisis-btn"
-            onClick={handleTriggerCrisis}
-            disabled={actionLoading}
-            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer disabled:opacity-50 shadow-sm transition-all flex items-center gap-1.5"
-          >
-            {actionLoading ? (<><Loader2 size={14} className="animate-spin" /> Triggering...</>) : (<><AlertTriangle size={14} /> Simulate Outbreak</>)}
-          </button>
-
-          {activeCrises.length > 0 && (
-            <button
-              onClick={handleReset}
-              disabled={actionLoading}
-              className="bg-slate-600 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md cursor-pointer disabled:opacity-50"
-            >
-              {t("reset")}
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600" id="crisis-intensity">
+            <span className="font-medium text-slate-700">Severity</span>
+            <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5" role="radiogroup" aria-label="Crisis severity">
+              {SEVERITY_LEVELS.map((lvl) => (
+                <button
+                  key={lvl.label}
+                  type="button"
+                  role="radio"
+                  aria-checked={crisisIntensity === lvl.value}
+                  disabled={crisisType === "Cold Chain Failure"}
+                  onClick={() => setCrisisIntensity(lvl.value)}
+                  className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    crisisIntensity === lvl.value ? "bg-rose-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {lvl.label}
+                </button>
+              ))}
+            </div>
+            {crisisType === "Cold Chain Failure" ? (
+              <span className="text-slate-400">A refrigeration failure is on/off — severity doesn't apply.</span>
+            ) : crisisSeverity?.severity[crisisType] ? (
+              <span className="text-slate-400" title={crisisSeverity.severity[crisisType].why}>
+                At Moderate: ~{Math.round(crisisSeverity.severity[crisisType].stock_fraction * 100)}% of stock consumed
+                {crisisSeverity.severity[crisisType].bed_fraction > 0 &&
+                  `, beds close ~${Math.round(crisisSeverity.severity[crisisType].bed_fraction * 100)}% of the gap to full`}
+                . Facilities vary ±25%.
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
       {/* Stat Cards */}
       <div id="stat-cards" className="stagger grid grid-cols-2 gap-3 md:grid-cols-5">
         <StatCard label={t("totalPhcs")} value={phcs.length} icon={Building2} />
-        <StatCard label={t("criticalAlerts")} value={criticalCount} tone="critical" icon={AlertTriangle} pulse={criticalCount > 0} />
-        <StatCard label={t("warningAlerts")} value={warningCount} tone="warning" icon={BellRing} />
-        <StatCard label={t("avgBedOccupancy")} value={`${avgBeds}%`} icon={BedDouble} />
-        <StatCard label={t("avgAttendance")} value={`${avgAttendance}%`} tone="good" icon={UserCheck} />
+        <StatCard label={t("criticalAlerts")} value={criticalCount} tone="critical" icon={AlertTriangle} pulse={criticalCount > 0} delta={delta("critical", "up")} />
+        <StatCard label={t("warningAlerts")} value={warningCount} tone="warning" icon={BellRing} delta={delta("warning", "up")} />
+        <StatCard label={t("avgBedOccupancy")} value={`${avgBeds}%`} icon={BedDouble} delta={delta("avgBeds", "up", " pts")} />
+        <StatCard label={t("avgAttendance")} value={`${avgAttendance}%`} tone="good" icon={UserCheck} delta={delta("avgAttendance", "down", " pts")} />
       </div>
 
-      <LiveSignalsPanel onLoadIntoSimulator={loadSignalIntoSimulator} />
-
-      <WeatherImpactPanel applied={weatherAdjusted} onApply={setWeatherAdjusted} intensity={weatherIntensity} onIntensity={setWeatherIntensity} />
-
-      {/* SDG 3.8 Impact Dashboard */}
-      <div id="sdg-panel" className="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-950 border border-brand-800/50 rounded-xl p-5 text-white shadow-lg">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <div className="font-bold text-brand-300 text-base flex items-center gap-2">
-              <Globe size={18} /> SDG 3.8 Impact Dashboard
-            </div>
-            <div className="text-xs text-slate-400 mt-0.5">
-              Universal Health Coverage — Live impact estimates based on current network state
-            </div>
-          </div>
-          <a
-            href="https://sdgs.un.org/goals/goal3"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-brand-400 hover:text-brand-300 border border-brand-800 px-2 py-1 rounded-lg transition-colors inline-flex items-center gap-1"
-          >
-            UN SDG Goal 3 <ExternalLink size={10} />
-          </a>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-            <div className="text-2xl font-black text-rose-300"><CountUp value={sdgMetrics.criticalPhcs} /></div>
-            <div className="text-xs text-slate-400 mt-1">Facilities at critical risk</div>
-          </div>
-          <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-            <div className="text-2xl font-black text-orange-300"><CountUp value={sdgMetrics.patientsAtRisk} thousands /></div>
-            <div className="text-xs text-slate-400 mt-1">Patients potentially at risk</div>
-            <div className="text-[9px] text-slate-600 mt-0.5">Est. ~2,000 per critical PHC</div>
-          </div>
-          <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-            <div className="text-2xl font-black text-amber-300"><CountUp value={sdgMetrics.stockoutDaysPrevented} /></div>
-            <div className="text-xs text-slate-400 mt-1">Stockout-days preventable</div>
-            <div className="text-[9px] text-slate-600 mt-0.5">Via pending transfer recommendations</div>
-          </div>
-          <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-            <div className="flex items-baseline gap-1 mb-2">
-              <div className="text-2xl font-black text-brand-300"><CountUp value={`${sdgMetrics.coverageScore}%`} /></div>
-            </div>
-            <div className="w-full bg-white/10 rounded-full h-1.5">
-              <div
-                className="bg-gradient-to-r from-brand-400 to-emerald-400 h-1.5 rounded-full transition-all duration-700"
-                style={{ width: `${sdgMetrics.coverageScore}%` }}
-              />
-            </div>
-            <div className="text-xs text-slate-400 mt-1">SDG 3.8 Coverage Score</div>
-          </div>
-        </div>
-      </div>
+      {/* A simulated crisis's before/after detail, real weather signals, the weather
+          what-if overlay, consumption anomalies, capacity redistribution, the SDG 3.8
+          rollup and the medicines reference all moved to Insights/Federated — see
+          frontend/src/pages/AGENTS.md. This keeps only what's needed to see, right
+          now, what's short and who should send what. */}
+      {crisisImpacts.length > 0 && (
+        <Link
+          to="/insights"
+          id="crisis-impact-link"
+          className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 hover:bg-rose-100 transition-colors"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <FlaskConical size={15} /> See exactly what the last simulation changed
+          </span>
+          <span className="text-xs font-semibold">Open Insights →</span>
+        </Link>
+      )}
 
       {/* Map + State List (pass recs for transfer arrows) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -687,129 +643,20 @@ export default function Dashboard() {
         <div id="alerts-panel" className="card p-4">
           <div className="mb-1 flex items-center justify-between gap-2">
             <div className="text-sm font-semibold text-slate-700">{t("stockoutAlerts")}</div>
-            {weatherAdjusted && (
-              <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${scenarioError ? "bg-amber-50 text-amber-700" : "bg-violet-50 text-violet-700"}`}>
-                {scenarioError ? t("impact.chip.unavailable") : t("impact.chip.scenario", { n: weatherIntensity.toFixed(2) })}
-              </span>
-            )}
+            <Link to="/insights" className="text-[10px] text-violet-600 hover:underline font-medium">
+              Weather what-if scenario →
+            </Link>
           </div>
           <AlertsList alerts={alerts} />
         </div>
         <div id="redistribution-panel" className="card p-4">
           <div className="flex items-center justify-between mb-1">
-            <div className="text-sm font-semibold text-slate-700">{t("redistributionRecs")}{weatherAdjusted && !scenarioError && <span className="ml-2 rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">{t("impact.chip.planned", { n: weatherIntensity.toFixed(2) })}</span>}</div>
+            <div className="text-sm font-semibold text-slate-700">{t("redistributionRecs")}</div>
             <div className="flex items-center gap-1 text-[10px] text-slate-400 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded font-medium text-violet-600">
               <Brain size={11} /> AI explanations available
             </div>
           </div>
           <RedistributionList recs={recs} medicines={medicines} onTransferExecuted={() => loadData(false)} />
-        </div>
-      </div>
-
-      {/* Consumption anomalies + capacity (beds/staff) redistribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div id="anomaly-panel" className="card p-4">
-          <div className="flex items-center justify-between mb-1">
-            <div>
-              <div className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                <Search size={14} /> {t("consumptionAnomalies")}
-              </div>
-              <div className="text-[11px] text-slate-400">{t("consumptionAnomaliesSub")}</div>
-            </div>
-            {anomalies.length > 0 && (
-              <span className="text-[10px] text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded font-semibold">
-                {anomalies.length} flagged
-              </span>
-            )}
-          </div>
-          <AnomalyList anomalies={anomalies} />
-        </div>
-        <div className="card p-4">
-          <div className="mb-1">
-            <div className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <Building2 size={14} /> {t("capacityRedistribution")}
-            </div>
-            <div className="text-[11px] text-slate-400">{t("capacityRedistributionSub")}</div>
-          </div>
-          <CapacityRedistributionList data={capacity} />
-        </div>
-      </div>
-
-      {/* Medicines panel */}
-      <div className="card p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-sm font-semibold text-slate-700">Medicines</div>
-          <div className="text-xs text-slate-500">Reference priorities from backend</div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {medicines.map((m) => (
-            <div key={m.name} className="p-3 border rounded-md">
-              <div className="flex items-start gap-3">
-                <div>
-                  <span
-                    className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded"
-                    style={{ backgroundColor: m.tier_color || "#ddd", color: "#fff" }}
-                  >
-                    {m.tier_badge || m.tier_title || ""}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-slate-800">{m.name}</div>
-                  <div className="text-xs text-slate-500">
-                    {m.unit} · {m.category} {m.seasonal ? `· ${m.seasonal}` : ""}
-                  </div>
-                  {m.tier_description && <div className="text-xs text-slate-600 mt-1">{m.tier_description}</div>}
-                </div>
-                <div className="shrink-0">
-                  <button
-                    onClick={() => handleToggleMed(m.name)}
-                    className="text-xs px-2 py-1 rounded-md border bg-slate-50 text-slate-700"
-                  >
-                    {expandedMeds[m.name] ? "Hide states" : "Show states"}
-                  </button>
-                </div>
-              </div>
-
-              {expandedMeds[m.name] && (
-                <div className="mt-3 grid grid-cols-1 gap-2">
-                  {Object.keys(stateList).map((st) => {
-                    const agg = (medStateAggregates[m.name] || {})[st];
-                    if (!agg) return null;
-                    const pct = agg.total_capacity
-                      ? Math.round((agg.total_current / agg.total_capacity) * 100)
-                      : 0;
-                    return (
-                      <div
-                        key={st}
-                        className="flex items-center justify-between p-2 rounded-md hover:bg-slate-50 cursor-pointer"
-                        onClick={() => openStateModal(m.name, st)}
-                      >
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-slate-800">{st}</div>
-                          <div className="text-xs text-slate-500">
-                            {agg.phcCount} PHCs · {agg.total_current} {m.unit} of {agg.total_capacity} capacity ({pct}%)
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {agg.criticalCount > 0 && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
-                              {agg.criticalCount}
-                            </span>
-                          )}
-                          {agg.warningCount > 0 && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
-                              {agg.warningCount}
-                            </span>
-                          )}
-                          <div className="text-xs text-slate-400">{pct}%</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
         </div>
       </div>
     </div>

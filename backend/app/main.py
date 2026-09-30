@@ -9,7 +9,6 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
-from app.services.rate_limit import limiter
 from app.routers import (
     alerts,
     anomalies,
@@ -30,6 +29,7 @@ from app.routers import (
 )
 from app.services import auth as auth_service
 from app.services import forecasting, signal_alerts, worker_pool
+from app.services.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 

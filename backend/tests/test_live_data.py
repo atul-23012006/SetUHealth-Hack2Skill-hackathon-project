@@ -254,13 +254,13 @@ def test_assistant_context_includes_real_weather_when_available(monkeypatch):
         return [_raw_weather(20, 75, [40] * 7, temp=27.5) for _ in range(n)]
 
     monkeypatch.setattr(live_data, "_request", fake)
-    ctx, _facilities = assistant._build_context("Bihar")
+    ctx, _facilities = assistant._build_context("", "Bihar")
     assert "Real weather forecast by state (Open-Meteo" in ctx
     assert "- Bihar:" in ctx and "27.5" in ctx
 
 
 def test_assistant_context_omits_weather_when_feed_is_down():
-    ctx, _facilities = assistant._build_context(None)
+    ctx, _facilities = assistant._build_context("", None)
     assert "Real weather forecast" not in ctx
 
 

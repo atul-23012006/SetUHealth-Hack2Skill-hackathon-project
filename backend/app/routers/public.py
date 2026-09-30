@@ -11,14 +11,11 @@ Because it has no auth to gate abuse, it carries its own rate limit
 (``slowapi``), scoped to just this router.
 """
 from fastapi import APIRouter, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from app.services import public_stats
+from app.services.rate_limit import limiter
 
 router = APIRouter(prefix="/api/public", tags=["public"])
-
-limiter = Limiter(key_func=get_remote_address)
 
 _RATE_LIMIT = "60/minute"
 

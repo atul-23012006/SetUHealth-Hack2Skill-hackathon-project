@@ -1,8 +1,9 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
 import { useAsync } from "../lib/useAsync";
 import { useLang } from "../lib/LangContext";
+import { useAuth } from "../lib/AuthContext";
 import type { PHC, Forecast, RedistributionRec } from "../lib/types";
 import AlertsList from "../components/AlertsList";
 import RedistributionList from "../components/RedistributionList";
@@ -17,6 +18,7 @@ interface StateData {
 export default function StateView() {
   const { state } = useParams<{ state: string }>();
   const { t } = useLang();
+  const { isNational, canAccessState, homePath } = useAuth();
 
   const { data, loading, error, reload } = useAsync<StateData>(async () => {
     const [phcs, alerts, recs, medicines] = await Promise.all([
@@ -24,6 +26,11 @@ export default function StateView() {
     ]);
     return { phcs, alerts, recs, medicines: medicines || [] };
   }, [state]);
+
+  // A phc_operator has no state-level view at all; a state_coordinator only
+  // has one for their own state — either way, someone else's state (or any
+  // state for an operator) bounces back to this user's own jurisdiction.
+  if (!state || !canAccessState(state)) return <Navigate to={homePath} replace />;
 
   if (loading) return <PageLoader label={t("loading")} />;
 
@@ -42,9 +49,11 @@ export default function StateView() {
   return (
     <div className="space-y-6">
       <div id="state-header">
-        <Link to="/" className="text-sm text-brand-600 hover:underline">
-          ← {t("dashboard")}
-        </Link>
+        {isNational && (
+          <Link to="/" className="text-sm text-brand-600 hover:underline">
+            ← {t("dashboard")}
+          </Link>
+        )}
         <h1 className="page-title mt-1">{state}</h1>
       </div>
 

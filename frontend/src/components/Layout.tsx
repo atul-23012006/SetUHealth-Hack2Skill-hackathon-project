@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
-  ArrowRightLeft, Globe, LayoutDashboard, LineChart, LogOut, MapPin, Menu, Network,
+  ArrowRightLeft, Building2, Globe, LayoutDashboard, LineChart, LogOut, MapPin, Menu, Network,
   Search, Sparkles, TriangleAlert, UserRound, X,
 } from "lucide-react";
 import { useLang } from "../lib/LangContext";
@@ -63,9 +63,36 @@ const NAV_ITEMS = [
   { to: "/assistant", end: false, icon: Sparkles, labelKey: "assistant" as const },
 ];
 
+// A national_admin (or nobody signed in yet, demo mode's default) gets the
+// full national nav above unchanged. A state_coordinator or phc_operator is
+// scoped to their own jurisdiction (see AuthContext's canAccessState /
+// canAccessPhc, enforced by each page's own redirect guard) — Insights and
+// Federated are inherently cross-state/national tools with no per-jurisdiction
+// view to scope them to, so they're left off a scoped role's nav entirely
+// rather than shown and then immediately bounced.
+function navItemsForRole(role: string | null, homeState: string | null, homePhcId: string | null) {
+  if (role === "phc_operator" && homePhcId) {
+    return [
+      { to: `/phcs/${encodeURIComponent(homePhcId)}`, end: true, icon: Building2, labelKey: "nav.myFacility" as const },
+      { to: "/transfers", end: false, icon: ArrowRightLeft, labelKey: "transfers" as const },
+      { to: "/assistant", end: false, icon: Sparkles, labelKey: "assistant" as const },
+    ];
+  }
+  if (role === "state_coordinator" && homeState) {
+    return [
+      { to: `/states/${encodeURIComponent(homeState)}`, end: true, icon: LayoutDashboard, labelKey: "dashboard" as const },
+      { to: "/explore", end: false, icon: MapPin, labelKey: "explore" as const },
+      { to: "/transfers", end: false, icon: ArrowRightLeft, labelKey: "transfers" as const },
+      { to: "/assistant", end: false, icon: Sparkles, labelKey: "assistant" as const },
+    ];
+  }
+  return NAV_ITEMS;
+}
+
 export default function Layout() {
   const { lang, setLang, t } = useLang();
-  const { mode, signedIn, user, logout, users, userId, setUserId } = useAuth();
+  const { mode, signedIn, user, logout, users, userId, setUserId, role, homeState, homePhcId } = useAuth();
+  const navItems = navItemsForRole(role, homeState, homePhcId);
   // Token mode with nobody signed in: only the sign-in page (and the public portal) is reachable.
   const gated = mode === "token" && !signedIn;
   const [offlineCount, setOfflineCount] = useState(readOfflineQueueLength);
@@ -133,7 +160,7 @@ export default function Layout() {
 
   const sidebarNav = (isCollapsed: boolean, onNavigate?: () => void) => (
     <nav className="flex flex-col gap-1" aria-label="Primary">
-      {NAV_ITEMS.map(({ to, end, icon: Icon, labelKey }) => (
+      {navItems.map(({ to, end, icon: Icon, labelKey }) => (
         <NavLink key={to} to={to} end={end} onClick={onNavigate} className={linkClass(isCollapsed)} title={isCollapsed ? t(labelKey) : undefined}>
           <Icon size={17} aria-hidden="true" className="shrink-0" />
           {!isCollapsed && <span>{t(labelKey)}</span>}

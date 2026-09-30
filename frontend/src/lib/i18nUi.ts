@@ -31,6 +31,7 @@ export const uiEn: Record<string, string> = {
   "common.connecting": "Connecting",
 
   "nav.publicPortal": "Public Portal",
+  "nav.myFacility": "My Facility",
   "nav.insights": "Insights",
   "nav.public": "Public",
   "nav.takeTour": "Take the tour",
@@ -299,6 +300,7 @@ export const uiHi: Record<string, string> = {
   "common.connecting": "कनेक्ट हो रहा है",
 
   "nav.publicPortal": "सार्वजनिक पोर्टल",
+  "nav.myFacility": "मेरी सुविधा",
   "nav.insights": "जानकारी",
   "nav.public": "सार्वजनिक",
   "nav.takeTour": "टूर लें",
@@ -567,6 +569,7 @@ export const uiMr: Record<string, string> = {
   "common.connecting": "कनेक्ट होत आहे",
 
   "nav.publicPortal": "सार्वजनिक पोर्टल",
+  "nav.myFacility": "माझी सुविधा",
   "nav.insights": "जानकारी",
   "nav.public": "सार्वजनिक",
   "nav.takeTour": "फेरफटका घ्या",
@@ -835,6 +838,7 @@ export const uiTa: Record<string, string> = {
   "common.connecting": "இணைக்கப்படுகிறது",
 
   "nav.publicPortal": "பொது இணையதளம்",
+  "nav.myFacility": "எனது வசதி",
   "nav.insights": "நுண்ணறிவு",
   "nav.public": "பொது",
   "nav.takeTour": "சுற்றுப்பயணம்",

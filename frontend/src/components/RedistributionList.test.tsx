@@ -3,12 +3,27 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import RedistributionList from './RedistributionList'
 import { LangProvider } from '../lib/LangContext'
+import { AuthProvider } from '../lib/AuthContext'
 import { api } from '../lib/api'
 import type { RedistributionRec } from '../lib/types'
 
+// national_admin has no jurisdiction restriction, matching this file's
+// pre-existing assumption that every row's Execute button is always clickable.
+// See AuthContext.test.tsx / RedistributionList's own canExecute for the
+// (separately tested) scoped-role behavior.
 vi.mock('../lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/api')>()
-  return { ...actual, api: { ...actual.api, executeTransfer: vi.fn() } }
+  return {
+    ...actual,
+    api: {
+      ...actual.api,
+      executeTransfer: vi.fn(),
+      authConfig: vi.fn().mockResolvedValue({ mode: 'demo' }),
+      listUsers: vi.fn().mockResolvedValue([
+        { user_id: 'national_admin', label: 'National Administrator', role: 'national_admin', authorized_phc_ids: [], authorized_states: ['*'] },
+      ]),
+    },
+  }
 })
 
 function rec(overrides: Partial<RedistributionRec> = {}): RedistributionRec {
@@ -33,9 +48,11 @@ function rec(overrides: Partial<RedistributionRec> = {}): RedistributionRec {
 
 function renderList(recs: RedistributionRec[], onTransferExecuted = vi.fn()) {
   return render(
-    <LangProvider>
-      <RedistributionList recs={recs} onTransferExecuted={onTransferExecuted} />
-    </LangProvider>,
+    <AuthProvider>
+      <LangProvider>
+        <RedistributionList recs={recs} onTransferExecuted={onTransferExecuted} />
+      </LangProvider>
+    </AuthProvider>,
   )
 }
 
@@ -98,9 +115,11 @@ describe('RedistributionList', () => {
 
     // Parent refetches and the solver proposes the identical pair again.
     rerender(
-      <LangProvider>
-        <RedistributionList recs={[rec()]} />
-      </LangProvider>,
+      <AuthProvider>
+        <LangProvider>
+          <RedistributionList recs={[rec()]} />
+        </LangProvider>
+      </AuthProvider>,
     )
 
     expect(screen.queryByText('12 km')).not.toBeInTheDocument()
@@ -118,9 +137,11 @@ describe('RedistributionList', () => {
     await waitFor(() => expect(api.executeTransfer).toHaveBeenCalledTimes(1))
 
     rerender(
-      <LangProvider>
-        <RedistributionList recs={[other]} />
-      </LangProvider>,
+      <AuthProvider>
+        <LangProvider>
+          <RedistributionList recs={[other]} />
+        </LangProvider>
+      </AuthProvider>,
     )
 
     expect(screen.getByText('ORS Sachets')).toBeInTheDocument()

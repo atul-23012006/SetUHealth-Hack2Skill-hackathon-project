@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Circle, CircleMarker, MapContainer, Marker, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -9,6 +9,7 @@ import {
 import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
 import { useLang } from "../lib/LangContext";
+import { useAuth } from "../lib/AuthContext";
 import type { GeocodeResult, NetworkFacility, OsmFacility, Risk, SignalLevel } from "../lib/types";
 import BaseTiles from "../components/BaseTiles";
 import RiskBadge from "../components/RiskBadge";
@@ -104,6 +105,7 @@ function ErrorNote({ what, error, onRetry }: { what: string; error: string; onRe
 
 export default function Explore() {
   const { t } = useLang();
+  const { role, homePath } = useAuth();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const lat = Number(params.get("lat")) || DEFAULT_PLACE.lat;
@@ -201,6 +203,11 @@ export default function Explore() {
     const o = osmList.find((f) => f.osm_id === active);
     return o ? [o.lat, o.lon] : null;
   }, [active, netList, osmList]);
+
+  // A phc_operator's nav has no Explore entry — it's a live-data radius search,
+  // not scoped facility data, so it doesn't fit a single-facility remit. A
+  // state_coordinator keeps it (nav above); this only closes the direct-URL gap.
+  if (role === "phc_operator") return <Navigate to={homePath} replace />;
 
   return (
     <div className="space-y-6">

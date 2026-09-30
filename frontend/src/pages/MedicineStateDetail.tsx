@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Snowflake } from "lucide-react";
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
 import { useAsync } from "../lib/useAsync";
 import { useLang } from "../lib/LangContext";
+import { useAuth } from "../lib/AuthContext";
 import type { PHCDetail as PHCDetailType, Forecast } from "../lib/types";
 import RiskBadge from "../components/RiskBadge";
 
@@ -19,6 +20,7 @@ export default function MedicineStateDetail() {
   const medicine = rawMedicine ? decodeURIComponent(rawMedicine) : "";
   const state = rawState ? decodeURIComponent(rawState) : "";
   const { t } = useLang();
+  const { canAccessState, homePath } = useAuth();
 
   // selected PHC to show PHC-detail-like view
   const [selectedPhcId, setSelectedPhcId] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export default function MedicineStateDetail() {
   }, [selectedForecast]);
 
   if (!medicine || !state) return <div className="text-center text-slate-400 py-20">Invalid medicine or state</div>;
+  if (!canAccessState(state)) return <Navigate to={homePath} replace />;
   if (loading) return <PageLoader label={t("loading")} />;
 
   return (

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Search, Building2 } from "lucide-react";
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
+import { useAuth } from "../lib/AuthContext";
 import type { CrisisImpact, ConsumptionAnomaly, CapacityRecommendations, Medicine } from "../lib/types";
 import AnomalyList from "../components/AnomalyList";
 import CapacityRedistributionList from "../components/CapacityRedistributionList";
@@ -20,6 +21,7 @@ import CrisisImpactPanel from "../components/CrisisImpactPanel";
 export default function Insights() {
   const { t } = useLang();
   const navigate = useNavigate();
+  const { isNational, homePath } = useAuth();
   const [loading, setLoading] = useState(true);
   const [crisisImpacts, setCrisisImpacts] = useState<CrisisImpact[]>([]);
   const [anomalies, setAnomalies] = useState<ConsumptionAnomaly[]>([]);
@@ -60,6 +62,10 @@ export default function Insights() {
   const handleToggleMed = (name: string) => {
     setExpandedMeds((s) => ({ ...s, [name]: !s[name] }));
   };
+
+  // National cross-state benchmarking — no per-jurisdiction view to scope
+  // this to, so it's national_admin only (same reasoning as Federated).
+  if (!isNational) return <Navigate to={homePath} replace />;
 
   if (loading) return <PageLoader label={t("loading")} />;
 

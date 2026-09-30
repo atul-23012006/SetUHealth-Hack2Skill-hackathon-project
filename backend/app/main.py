@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -28,6 +29,9 @@ from app.routers import (
 )
 from app.services import auth as auth_service
 from app.services import forecasting, signal_alerts, worker_pool
+from app.services.rate_limit import limiter
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -48,6 +52,26 @@ async def lifespan(_: FastAPI):
     poller = None
     if settings.signal_polling_enabled and settings.live_data_enabled:
         poller = asyncio.create_task(signal_alerts.poll_forever())
+
+    if not auth_service.token_mode():
+        # Loud on purpose: demo mode has no real authentication at all (see
+        # services/auth.py) — every console route, including crisis trigger/
+        # reset and transfer execution, is reachable by anyone who can reach
+        # this process. Fine for a local/offline demo; never for a public
+        # deployment. Set AUTH_MODE=token (+ JWT_SECRET, and real per-user
+        # passwords via `python -m app.scripts.manage_users set-password`)
+        # before exposing this process to anything but localhost.
+        logger.warning(
+            "*** AUTH_MODE=demo: every console API route is UNAUTHENTICATED. "
+            "Do not expose this process to the public internet in this mode. "
+            "Set AUTH_MODE=token for a live deployment. ***"
+        )
+    if settings.cors_origins == ["*"]:
+        logger.warning(
+            "*** CORS_ORIGINS is unset (defaulting to '*'): any website can call this API "
+            "from a browser. Set CORS_ORIGINS to your real frontend origin(s) for a live deployment. ***"
+        )
+
     yield
     if poller:
         poller.cancel()
@@ -65,15 +89,22 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    # Every request carries its auth (if any) as a header — Authorization:
+    # Bearer in token mode, X-User-Id in demo mode — never a cookie (nothing
+    # in this app ever calls set_cookie), so browser "credentials" (cookies /
+    # HTTP auth) are never in play and don't need CORS's credentials flag.
+    # Leaving this on would additionally make wildcard origins dangerous:
+    # Starlette answers a credentialed wildcard request by reflecting the
+    # caller's Origin instead of "*", which defeats the wildcard's own point.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Rate limiting is scoped to the public router only (see routers/public.py) —
-# it's the one router with no auth dependency, so it's the one that needs its
-# own abuse protection.
-app.state.limiter = public.limiter
+# Shared across every router (see services/rate_limit.py) so the officer
+# console has baseline abuse protection too, not just the public router —
+# essential in demo auth mode, where require_console_access is a no-op.
+app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 

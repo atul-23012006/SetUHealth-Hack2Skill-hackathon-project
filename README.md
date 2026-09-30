@@ -163,6 +163,12 @@ The backend's generated dataset and SQLite ledger live on a named volume, so
 transfers, the crisis log and the audit trail persist across
 `docker compose down`.
 
+**Deploying this beyond your own machine — a shared server, a public URL —
+is a different checklist from running it locally.** The defaults above
+(no login, wide-open CORS) are intentionally friction-free for a local demo
+and unsafe for anything public. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+before you do that.
+
 ### Backend (without Docker)
 
 ```bash

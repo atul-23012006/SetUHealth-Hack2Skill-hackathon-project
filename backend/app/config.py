@@ -41,6 +41,14 @@ class Settings(BaseSettings):
     # secret, and rate-limited to a small public catalog. Set your own key
     # (free at data.gov.in) for higher limits or a broader dataset.
     data_gov_in_api_key: str = "579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b"
+    # -1 = auto (min(cpu_count, 8), see services/worker_pool.py). Each worker
+    # is a separate OS process (spawn, not fork) that reimports the whole app
+    # and reloads the full dataset independently — fine on a normal box, but
+    # on a memory-capped one (e.g. Render's free 512Mi) even one extra worker
+    # can be enough to OOM before the server ever opens its port. Set to 0 on
+    # a deployment that tight to run forecasting/redistribution inline in the
+    # main process instead — slower per call, but no duplicated memory.
+    worker_pool_size: int = -1
 
     class Config:
         env_file = ".env"

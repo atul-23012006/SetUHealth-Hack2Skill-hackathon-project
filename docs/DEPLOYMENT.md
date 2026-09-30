@@ -35,9 +35,14 @@ straight from the existing `backend/Dockerfile`.
      Dockerfile's `CMD` already accounts for this (regenerates the dataset
      at boot if the disk is empty), so this just works.
 3. **Environment variables** (Render's dashboard, not committed anywhere):
-   `GEMINI_API_KEY`, `AUTH_MODE=token`, `JWT_SECRET`, `DEMO_USER_PASSWORD` —
-   see §1 below for what these do and how to generate them. Leave
-   `CORS_ORIGINS` for step 3 below, once the frontend has a URL.
+   `GEMINI_API_KEY`, `AUTH_MODE=token`, `JWT_SECRET`, `DEMO_USER_PASSWORD`,
+   and **`WORKER_POOL_SIZE=0`** — see §1 below for what the auth ones do.
+   `WORKER_POOL_SIZE=0` matters specifically on Render's free tier: the
+   default spawns extra OS processes to parallelize forecasting, each
+   reimporting the whole app and reloading the full dataset independently —
+   enough to OOM a 512Mi instance before it ever opens its port. `0` runs
+   that work inline instead. Leave `CORS_ORIGINS` for step 3 below, once the
+   frontend has a URL.
 4. Deploy, then copy the service's public URL
    (`https://<something>.onrender.com`).
 5. **Free-tier note**: the service sleeps after inactivity; the first

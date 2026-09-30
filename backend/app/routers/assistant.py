@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.services import auth, db, forecasting, genai, live_data, redistribution
+from app.services import auth, db, forecasting, genai, live_data, redistribution, store
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
@@ -36,17 +36,62 @@ def _top_alerts_diverse(state: str | None, per_state_cap: int = 3, total_cap: in
     return diverse
 
 
-def _build_context(state: str | None) -> tuple[str, list[dict]]:
+def _match_query_facilities(query: str, limit: int = 3) -> list[dict]:
+    """Facilities the question names directly, by name ("Pune PHC 6") or id
+    ("PHC-0006") — matched against the full roster, not just the sampled
+    alerts/recs below. Without this, a question about a specific facility's
+    beds, staff or stock only worked by coincidence, if that facility
+    happened to already be in the top-N alert sample; most facilities never
+    are, which is why "how many beds does X have" used to draw a blank."""
+    q = query.lower()
+    matches = []
+    for p in store.PHCS:
+        if p["name"].lower() in q or p["id"].lower() in q:
+            matches.append(p)
+            if len(matches) >= limit:
+                break
+    return matches
+
+
+def _facility_detail_lines(phc: dict) -> list[str]:
+    """Current beds, staff and stock snapshot for one facility the question
+    named — the data those questions actually need, which the alert/rec
+    sample below was never built to carry (it only covers facilities with an
+    active stockout risk or redistribution move, not a general lookup)."""
+    beds_occupied = store.BED_HISTORY[phc["id"]]["occupied"][-1]
+    attendance = store.STAFF_HISTORY[phc["id"]]["attendance_pct"][-1]
+    sanctioned = sum(s["sanctioned"] for s in phc["staff"])
+    lines = [
+        f"- {phc['name']} ({phc['district']}, {phc['state']}): "
+        f"{beds_occupied}/{phc['beds_total']} beds occupied, "
+        f"{attendance}% staff attendance today ({sanctioned} sanctioned posts total), "
+        f"population served ~{phc.get('population_served', 'unknown')}.",
+    ]
+    stock = store.STOCK_HISTORY.get(phc["id"], {})
+    for medicine, rec in stock.items():
+        level = rec["levels"][-1]
+        lines.append(f"  - {medicine}: {level} {rec['unit']} in stock (reorder level {rec['reorder_level']}).")
+    return lines
+
+
+def _build_context(query: str, state: str | None) -> tuple[str, list[dict]]:
     """Returns the prompt text and the (phc_id, phc_name) pairs it was built
     from — the second is never sent to the model, only used afterward by
     _related_facilities to find which of these the reply actually named."""
+    named = _match_query_facilities(query)
     alerts = _top_alerts_diverse(state)
     recs = redistribution.recommend_all(state)[:10]
-    facilities = [{"phc_id": a["phc_id"], "phc_name": a["phc_name"]} for a in alerts]
+    facilities = [{"phc_id": p["id"], "phc_name": p["name"]} for p in named]
+    facilities += [{"phc_id": a["phc_id"], "phc_name": a["phc_name"]} for a in alerts]
     facilities += [{"phc_id": r["from_phc_id"], "phc_name": r["from_phc_name"]} for r in recs]
     facilities += [{"phc_id": r["to_phc_id"], "phc_name": r["to_phc_name"]} for r in recs]
 
-    lines = ["Current stockout alerts (sampled across states for coverage):"]
+    lines = []
+    if named:
+        lines.append("Facilities named directly in the question (current snapshot):")
+        for p in named:
+            lines.extend(_facility_detail_lines(p))
+    lines.append("Current stockout alerts (sampled across states for coverage):")
     for a in alerts:
         lines.append(
             f"- {a['phc_name']} ({a['district']}, {a['state']}): {a['medicine']} "
@@ -147,7 +192,7 @@ def _prepare(req: ChatRequest, user: dict | None) -> tuple[str, str, list[dict]]
     feedback = ""
     if action and action.get("action") != "none":
         feedback = execute_action(action, user)
-    context, facilities = _build_context(req.state)
+    context, facilities = _build_context(req.query, req.state)
     return feedback, context, facilities
 
 

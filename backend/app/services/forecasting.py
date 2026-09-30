@@ -6,6 +6,8 @@ Falls back to a deterministic moving average model if the available history
 is too short or fitting fails. Stockout prediction is defined as the number
 of days until the projected inventory breaches the safety threshold (reorder level).
 """
+import threading
+
 import numpy as np
 
 # Imported at module load, not lazily inside forecast_medicine's hot loop:
@@ -35,6 +37,13 @@ FIT_WINDOW_DAYS = 90
 
 # Global in-memory cache to resolve CPU-bound model-fitting bottlenecks
 _FORECAST_CACHE = {}
+# Guards the expensive national computation in forecast_all below. Without
+# this, two concurrent callers racing an empty cache (e.g. the Dashboard
+# firing /api/forecast and /api/redistribution in parallel — the latter
+# calls forecast_all() too) would each independently run the full ~1.9k-fit
+# pass instead of one computing it and the other reading the result —
+# doubling CPU work for no reason, painfully slow on a CPU-throttled host.
+_NATIONAL_FORECAST_LOCK = threading.Lock()
 
 
 def clear_forecast_cache():
@@ -320,20 +329,26 @@ def forecast_all(state: str | None = None) -> list[dict]:
     # stays serial — the item count is small enough that pool-dispatch
     # overhead wouldn't pay for itself.
     if state is None:
-        resource_meta = _resource_meta_snapshot()
-        temperatures = _temperature_snapshot(resource_meta)
-        items = [
-            (phc_id, medicine, meds[medicine], phc, resource_meta.get(medicine), temperatures.get(phc_id))
-            for phc_id, meds in store.STOCK_HISTORY.items()
-            for phc in [store.PHC_BY_ID[phc_id]]
-            for medicine in meds
-        ]
-        futures = worker_pool.map_unordered(_forecast_one, items)
-        results = [fut.result() for fut in futures]
-        for r in results:
-            _FORECAST_CACHE[f"med_{r['phc_id']}_{r['medicine']}"] = r
-        _FORECAST_CACHE[cache_key] = results
-        return results
+        with _NATIONAL_FORECAST_LOCK:
+            # Re-check: another thread may have finished this exact computation
+            # while we were waiting for the lock — if so, use its result rather
+            # than redoing ~1.9k fits a second time.
+            if "all_None" in _FORECAST_CACHE:
+                return _FORECAST_CACHE["all_None"]
+            resource_meta = _resource_meta_snapshot()
+            temperatures = _temperature_snapshot(resource_meta)
+            items = [
+                (phc_id, medicine, meds[medicine], phc, resource_meta.get(medicine), temperatures.get(phc_id))
+                for phc_id, meds in store.STOCK_HISTORY.items()
+                for phc in [store.PHC_BY_ID[phc_id]]
+                for medicine in meds
+            ]
+            futures = worker_pool.map_unordered(_forecast_one, items)
+            results = [fut.result() for fut in futures]
+            for r in results:
+                _FORECAST_CACHE[f"med_{r['phc_id']}_{r['medicine']}"] = r
+            _FORECAST_CACHE[cache_key] = results
+            return results
 
     results = []
     for phc_id, meds in store.STOCK_HISTORY.items():

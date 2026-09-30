@@ -7,6 +7,12 @@
 # transfers, the crisis log and the audit trail survive `docker compose down`.
 # Set GEMINI_API_KEY in a .env file next to this one for live Gemini answers;
 # without it the app runs in its deterministic offline-mock mode.
+#
+# DEPLOYING THIS BEYOND YOUR OWN MACHINE? Read docs/DEPLOYMENT.md first and
+# set AUTH_MODE, JWT_SECRET, DEMO_USER_PASSWORD and CORS_ORIGINS in that same
+# .env file. Left unset (this file's default), the backend runs in "demo"
+# mode — no login on any console route — which the app itself will warn
+# loudly about in its logs on startup if you forget.
 
 services:
   backend:
@@ -16,6 +22,15 @@ services:
     environment:
       - PORT=8000
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - AUTH_MODE=${AUTH_MODE:-demo}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - DEMO_USER_PASSWORD=${DEMO_USER_PASSWORD:-}
+      # No default here on purpose: CORS_ORIGINS is a JSON array on the
+      # backend (see app/config.py) and an empty string fails to parse and
+      # crashes the app at startup. Bare `- CORS_ORIGINS` passes it through
+      # only when it's actually set in your shell/.env; left unset, Compose
+      # omits it entirely and the backend's own ["*"] default applies.
+      - CORS_ORIGINS
     volumes:
       - backend_data:/app/app/data/generated
     healthcheck:

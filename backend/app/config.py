@@ -5,8 +5,13 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     # Primary model, and one to fail over to when the primary is overloaded or
     # times out (Google sheds load per model). Set the fallback empty to disable.
-    gemini_model: str = "gemini-3.6-flash"
-    gemini_fallback_model: str = "gemini-3-flash-preview"
+    # Both are Flash-Lite class: meaningfully higher free-tier request quota
+    # than a plain Flash/Pro model (worth it for this app's short, factual
+    # replies), so a demo doesn't need billing enabled to stay usable.
+    # "-latest" tracks Google's current best Flash-Lite build automatically;
+    # the fallback is pinned so a fail-over target can't move under us.
+    gemini_model: str = "gemini-flash-lite-latest"
+    gemini_fallback_model: str = "gemini-3.5-flash-lite"
     cors_origins: list[str] = ["*"]
     # Public-data feeds (weather, World Bank, OpenStreetMap). Set LIVE_DATA_ENABLED=false
     # for fully offline demos; the /api/live endpoints then return 503.

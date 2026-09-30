@@ -3,7 +3,15 @@ FROM python:3.12-slim
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Installed as its own step, before the rest: a free-tier build container
+# (Render's is 512Mi, same ceiling as its runtime instances) can OOM if pip
+# has to resolve, download and build the whole numerical stack (numpy/
+# pandas/statsmodels, which pulls in scipy) in the same invocation as
+# everything else. Splitting it lowers each pip invocation's peak memory;
+# the second install below is then a no-op for these three since they
+# already satisfy requirements.txt's constraints.
+RUN pip install --no-cache-dir --root-user-action=ignore numpy pandas statsmodels
+RUN pip install --no-cache-dir --root-user-action=ignore -r requirements.txt
 
 COPY app ./app
 

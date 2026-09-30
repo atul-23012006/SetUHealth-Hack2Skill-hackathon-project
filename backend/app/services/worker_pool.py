@@ -16,12 +16,20 @@ import os
 from collections.abc import Callable
 from concurrent.futures import Future, ProcessPoolExecutor
 
+from app.config import settings
+
 # Capped at 8: a handful more workers than most deployment targets have cores
 # is fine (they just queue), but hundreds would not be — this is a ceiling,
 # not a target. More workers than CPU cores oversubscribes the CPU-bound half
 # of the work for no benefit (measured no improvement past core count on a
 # 4-core box).
-POOL_WORKERS = min(os.cpu_count() or 4, 8)
+#
+# settings.worker_pool_size == 0 opts out of the process pool entirely (see
+# its docstring in config.py) — every function below then runs its work
+# inline, in-process, instead of spawning anything.
+POOL_WORKERS = (
+    min(os.cpu_count() or 4, 8) if settings.worker_pool_size < 0 else settings.worker_pool_size
+)
 
 _POOL: ProcessPoolExecutor | None = None
 
@@ -54,7 +62,10 @@ def warm_pool() -> None:
     import of this module's callers (redistribution.py, forecasting.py),
     which reloads the generated dataset once per worker — before the first
     real request arrives, not during it. Called from app.main's lifespan
-    startup, off the event loop thread since it blocks for the full warmup."""
+    startup, off the event loop thread since it blocks for the full warmup.
+    A no-op when POOL_WORKERS is 0 — nothing to warm."""
+    if POOL_WORKERS == 0:
+        return
     pool = get_pool()
     futures = [pool.submit(_noop) for _ in range(POOL_WORKERS)]
     for fut in futures:
@@ -70,10 +81,25 @@ def shutdown_pool() -> None:
         _POOL = None
 
 
+def _run_inline[T](fn: Callable[..., T], args: tuple) -> Future:
+    """Run fn(*args) synchronously, right here, and hand back an
+    already-completed Future — so a caller that does ``fut.result()`` sees no
+    difference from the real process-pool path in map_unordered below."""
+    future: Future = Future()
+    try:
+        future.set_result(fn(*args))
+    except Exception as exc:
+        future.set_exception(exc)
+    return future
+
+
 def map_unordered[T](fn: Callable[..., T], arg_tuples: list[tuple]) -> list[Future]:
     """Submit one task per argument tuple and return the Futures in submission
     order (not necessarily completion order) — callers that need the results
     in a particular order zip them back against their own inputs, since the
-    pool doesn't know or care what those are."""
+    pool doesn't know or care what those are. Runs inline when POOL_WORKERS
+    is 0 (see config.py's worker_pool_size), never touching a process pool."""
+    if POOL_WORKERS == 0:
+        return [_run_inline(fn, args) for args in arg_tuples]
     pool = get_pool()
     return [pool.submit(fn, *args) for args in arg_tuples]

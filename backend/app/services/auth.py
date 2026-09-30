@@ -82,7 +82,7 @@ def token_mode() -> bool:
     return settings.auth_mode == "token"
 
 
-_SCRYPT_N, _SCRYPT_R, _SCRYPT_P = 2**14, 8, 1
+_SCRYPT_N, _SCRYPT_R, _SCRYPT_P = 2**settings.auth_scrypt_n_log2, 8, 1
 _EPHEMERAL_SECRET = secrets.token_urlsafe(48)
 ISSUER = "setuhealth"
 

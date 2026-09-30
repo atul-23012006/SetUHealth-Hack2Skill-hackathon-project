@@ -57,6 +57,14 @@ class Settings(BaseSettings):
     # window. Set to false there: both are deferred to whichever request
     # first actually needs them (results are cached after, same as eager).
     eager_warmup: bool = True
+    # scrypt's memory cost (services/auth.py), as a power of 2 — memory used
+    # is roughly 128 * 2**this * r(8) bytes. 14 (the default: ~16 MiB) is a
+    # reasonable cost on a normal host. On a memory-capped one (Render's free
+    # 512Mi), that allocation on top of an already-tight baseline (pandas/
+    # numpy/scipy/statsmodels imports + the full dataset) has been enough to
+    # get the whole process OOM-killed on the very first login. Lower to 12
+    # (~4 MiB) there — still a real cost function, just a lighter one.
+    auth_scrypt_n_log2: int = 14
 
     class Config:
         env_file = ".env"

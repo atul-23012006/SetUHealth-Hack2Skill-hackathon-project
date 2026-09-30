@@ -36,9 +36,10 @@ straight from the existing `backend/Dockerfile`.
      at boot if the disk is empty), so this just works.
 3. **Environment variables** (Render's dashboard, not committed anywhere):
    `GEMINI_API_KEY`, `AUTH_MODE=token`, `JWT_SECRET`, `DEMO_USER_PASSWORD`,
-   and **`WORKER_POOL_SIZE=0`** + **`EAGER_WARMUP=false`** — see §1 below for
-   what the auth ones do. The last two matter specifically on Render's free
-   tier (512Mi, 0.1 CPU):
+   and **`WORKER_POOL_SIZE=0`** + **`EAGER_WARMUP=false`** +
+   **`AUTH_SCRYPT_N_LOG2=12`** — see §1 below for what the auth ones do. The
+   last three matter specifically on Render's free tier (512Mi, 0.1 CPU),
+   which is tight enough that each of these has independently caused a crash:
    - `WORKER_POOL_SIZE=0` — the default spawns extra OS processes to
      parallelize forecasting, each reimporting the whole app and reloading
      the full dataset independently — enough to OOM a 512Mi instance before
@@ -48,6 +49,14 @@ straight from the existing `backend/Dockerfile`.
      0.1 CPU) can take long enough to blow past Render's own boot window.
      `false` defers it to the first request that needs it instead — that one
      request is slower (~10s), everything after is instant (cached).
+   - `AUTH_SCRYPT_N_LOG2=12` — password hashing (scrypt) is deliberately
+     memory-hard; the default cost (~16 MiB) on top of an already-tight
+     512Mi baseline was enough to OOM-kill the process on the very first
+     login. `12` (~4 MiB) is lighter but still a real, deliberately slow hash.
+
+   If you're still tight on memory after all three, `LIVE_DATA_ENABLED=false`
+   and `SIGNAL_POLLING_ENABLED=false` trim further (both poll/cache
+   real-world weather data that isn't essential to a demo).
 
    Leave `CORS_ORIGINS` for step 3 below, once the frontend has a URL.
 4. Deploy, then copy the service's public URL

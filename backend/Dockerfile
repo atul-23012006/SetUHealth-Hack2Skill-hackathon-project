@@ -10,8 +10,8 @@ COPY requirements.txt .
 # everything else. Splitting it lowers each pip invocation's peak memory;
 # the second install below is then a no-op for these three since they
 # already satisfy requirements.txt's constraints.
-RUN pip install --no-cache-dir numpy pandas statsmodels
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --root-user-action=ignore numpy pandas statsmodels
+RUN pip install --no-cache-dir --root-user-action=ignore -r requirements.txt
 
 COPY app ./app
 

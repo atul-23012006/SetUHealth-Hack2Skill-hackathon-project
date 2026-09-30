@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import axios from "axios";
 import {
   WifiOff, Play, Square, AlertTriangle, FlaskConical, Waves, Bug, Microscope,
@@ -9,6 +9,7 @@ import {
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
+import { useAuth } from "../lib/AuthContext";
 import type { PHC, Forecast, RedistributionRec, Risk, ActiveCrisis, CrisisImpact, CrisisSeverity, Medicine } from "../lib/types";
 import StatCard from "../components/StatCard";
 import IndiaMap from "../components/IndiaMap";
@@ -53,6 +54,7 @@ const DEMO_STEPS = [
 
 export default function Dashboard() {
   const { t } = useLang();
+  const { isNational, homePath } = useAuth();
   const [phcs, setPhcs] = useState<PHC[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [alerts, setAlerts] = useState<Forecast[]>([]);
@@ -98,6 +100,10 @@ export default function Dashboard() {
   const [crisisIntensity, setCrisisIntensity] = useState(1);
   const [crisisSeverity, setCrisisSeverity] = useState<CrisisSeverity | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  // Bumped by handleReset so a slower, already-in-flight background poll response
+  // (see the auto-poll effect below) can't land after the reset and silently
+  // repopulate activeCrises with stale pre-reset data.
+  const resetGenRef = useRef(0);
 
   useEffect(() => { api.crisisSeverity().then(setCrisisSeverity).catch(() => {}); }, []);
 
@@ -147,8 +153,12 @@ export default function Dashboard() {
   useEffect(() => {
     if (activeCrises.length === 0) return;
     const interval = setInterval(async () => {
+      const gen = resetGenRef.current;
       try {
         const crises = await api.activeCrises();
+        // A reset happened while this request was in flight — its response is
+        // stale pre-reset data, so drop it instead of overwriting the reset.
+        if (gen !== resetGenRef.current) return;
         setActiveCrises(crises);
       } catch (_) {}
     }, 5000);
@@ -228,6 +238,7 @@ export default function Dashboard() {
   };
 
   const handleReset = async () => {
+    resetGenRef.current += 1;
     setActionLoading(true);
     try {
       await api.resetCrisis();
@@ -261,7 +272,7 @@ export default function Dashboard() {
 
     try {
       // Step 0: Reset to clean state
-      await step(0, () => api.resetCrisis().then(() => { setKpiBaseline(null); setCrisisImpacts([]); loadData(false); }), 0);
+      await step(0, () => { resetGenRef.current += 1; return api.resetCrisis().then(() => { setKpiBaseline(null); setCrisisImpacts([]); loadData(false); }); }, 0);
       await sleep(2000);
 
       // Step 1: Trigger Monsoon Floods in Bihar
@@ -317,6 +328,12 @@ export default function Dashboard() {
   kpiRef.current = { critical: criticalCount, warning: warningCount, avgBeds, avgAttendance };
   const delta = (key: keyof Kpis, worseWhen: "up" | "down", suffix?: string) =>
     kpiBaseline ? { value: kpiRef.current[key] - kpiBaseline[key], worseWhen, suffix } : undefined;
+
+  // The national Dashboard (incl. the crisis simulator) is national_admin
+  // scope — a state_coordinator/phc_operator is sent to their own jurisdiction's
+  // home page instead. Nav already never links here for them; this closes the
+  // same gap for a typed URL, a bookmark, or the header brand-mark link.
+  if (!isNational) return <Navigate to={homePath} replace />;
 
   if (loading) return <PageLoader label={t("loading")} />;
 

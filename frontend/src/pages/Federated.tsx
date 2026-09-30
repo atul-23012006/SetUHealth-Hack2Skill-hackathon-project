@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import {
   Building2, ClipboardList, User, Package, BarChart3, AlertTriangle, Hash, Bot,
@@ -11,6 +11,7 @@ import PageLoader from "../components/PageLoader";
 import BenchmarkExplorer from "../components/BenchmarkExplorer";
 import FacilityCountBenchmark from "../components/FacilityCountBenchmark";
 import { useLang } from "../lib/LangContext";
+import { useAuth } from "../lib/AuthContext";
 import { useCountUp } from "../lib/useCountUp";
 import type { NationalFederatedPrior, BricsSharedPrior, PHC, Forecast, RedistributionRec } from "../lib/types";
 
@@ -82,6 +83,7 @@ function ConfidenceMeter({
 
 export default function Federated() {
   const { t } = useLang();
+  const { isNational, homePath } = useAuth();
   const [national, setNational] = useState<NationalFederatedPrior | null>(null);
   const [brics, setBrics] = useState<BricsSharedPrior | null>(null);
   const [privacyMode, setPrivacyMode] = useState<"aggregated" | "raw">("aggregated");
@@ -121,6 +123,10 @@ export default function Federated() {
       coverageScore,
     };
   }, [forecasts, recs, phcs]);
+
+  // National/BRICS aggregation — no per-jurisdiction view to scope this to,
+  // so it's national_admin only (same reasoning as Insights).
+  if (!isNational) return <Navigate to={homePath} replace />;
 
   if (!national || !brics) return <PageLoader label={t("loading")} />;
 

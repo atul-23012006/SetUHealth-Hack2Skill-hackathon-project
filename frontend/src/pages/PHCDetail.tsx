@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import {
   LineChart, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine
@@ -9,6 +9,7 @@ import { api } from "../lib/api";
 import { errorMessage } from "../lib/useAsync";
 import PageLoader from "../components/PageLoader";
 import { useLang } from "../lib/LangContext";
+import { useAuth } from "../lib/AuthContext";
 import type {
   PHCDetail as PHCDetailType, Forecast, ConsumptionAnomaly, RedistributionRec,
   CapacityRecommendations, StateWeather, Medicine, SignalLevel, AuditEvent,
@@ -17,6 +18,7 @@ import RiskBadge from "../components/RiskBadge";
 import AnomalyList from "../components/AnomalyList";
 import RedistributionList from "../components/RedistributionList";
 import CapacityRedistributionList from "../components/CapacityRedistributionList";
+import WindowedLineChart from "../components/WindowedLineChart";
 
 // Matches LiveSignalsPanel's chip styling (kept local — that file's version
 // isn't exported, and this is the only other place a bare signal chip is
@@ -41,6 +43,7 @@ const EVENT_KIND_STYLE: Record<string, string> = {
 export default function PHCDetail() {
   const { id } = useParams<{ id: string }>();
   const { t } = useLang();
+  const { role, canAccessPhc, homePath } = useAuth();
   const [phc, setPhc] = useState<PHCDetailType | null>(null);
   const [medicine, setMedicine] = useState<string>("");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -144,14 +147,21 @@ export default function PHCDetail() {
     );
   }
   if (!phc) return <PageLoader label={t("loading")} />;
+  // A phc_operator may only view their own facility; a state_coordinator only
+  // facilities in their own state. Gated here (not before the fetch) because
+  // phc.state — needed for the state_coordinator check — only exists once
+  // the facility has loaded.
+  if (!canAccessPhc(phc.id, phc.state)) return <Navigate to={homePath} replace />;
   const reorder = medicine ? phc.stock[medicine].reorder_level : 0;
 
   return (
     <div className="space-y-6">
       <div id="phc-header">
-        <Link to={`/states/${encodeURIComponent(phc.state)}`} className="text-sm text-brand-600 hover:underline">
-          ← {phc.state}
-        </Link>
+        {role !== "phc_operator" && (
+          <Link to={`/states/${encodeURIComponent(phc.state)}`} className="text-sm text-brand-600 hover:underline">
+            ← {phc.state}
+          </Link>
+        )}
         <h1 className="page-title mt-1">{phc.name}</h1>
         <div className="text-slate-500 text-sm">{phc.district}, {phc.state}</div>
       </div>
@@ -302,31 +312,15 @@ export default function PHCDetail() {
       <div id="phc-capacity" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="card p-4">
           <div className="text-sm font-semibold text-slate-700 mb-2">
-            {t("bedOccupancy")} ({phc.dates.length} {t("days")})
+            {t("bedOccupancy")} ({phc.dates.length} {t("days")} — drag the strip below to navigate)
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={bedChartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={9} />
-              <YAxis tick={{ fontSize: 10 }} domain={[0, phc.beds_total]} />
-              <Tooltip />
-              <Line type="monotone" dataKey="occupied" stroke="#4f46e5" dot={false} strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          <WindowedLineChart data={bedChartData} dataKey="occupied" stroke="#4f46e5" yDomain={[0, phc.beds_total]} height={180} />
         </div>
         <div className="card p-4">
           <div className="text-sm font-semibold text-slate-700 mb-2">
-            {t("staffAttendance")} ({phc.dates.length} {t("days")})
+            {t("staffAttendance")} ({phc.dates.length} {t("days")} — drag the strip below to navigate)
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={attendanceChartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={9} />
-              <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
-              <Tooltip />
-              <Line type="monotone" dataKey="pct" stroke="#059669" dot={false} strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          <WindowedLineChart data={attendanceChartData} dataKey="pct" stroke="#059669" yDomain={[0, 100]} height={180} />
         </div>
       </div>
 

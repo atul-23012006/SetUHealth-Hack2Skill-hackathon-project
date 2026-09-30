@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Truck, FileText, RefreshCw, Receipt } from "lucide-react";
 import { api } from "../lib/api";
 import PageLoader from "../components/PageLoader";
 import { useAsync } from "../lib/useAsync";
 import { useLang } from "../lib/LangContext";
+import { useAuth } from "../lib/AuthContext";
 import type { Transfer, AuditEvent } from "../lib/types";
 
 const KIND_STYLE: Record<string, string> = {
@@ -18,6 +19,7 @@ interface TransfersData {
 
 export default function Transfers() {
   const { t } = useLang();
+  const { role, homeState, homePhcId } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useAsync<TransfersData>(async () => {
@@ -26,7 +28,18 @@ export default function Transfers() {
     transfers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return { transfers, audit };
   }, []);
-  const { transfers, audit } = data ?? { transfers: [], audit: [] };
+  const { transfers: allTransfers, audit } = data ?? { transfers: [], audit: [] };
+  // Scoped roles only see manifests that touch their own domain — this API
+  // isn't jurisdiction-filtered server-side, so it's done here on the response.
+  const transfers = useMemo(() => {
+    if (role === "phc_operator" && homePhcId) {
+      return allTransfers.filter((tr) => tr.from_phc_id === homePhcId || tr.to_phc_id === homePhcId);
+    }
+    if (role === "state_coordinator" && homeState) {
+      return allTransfers.filter((tr) => tr.from_state === homeState || tr.to_state === homeState);
+    }
+    return allTransfers;
+  }, [allTransfers, role, homeState, homePhcId]);
 
   const handleDownloadFhir = async (transferId: string) => {
     setDownloadingId(transferId);
@@ -81,7 +94,9 @@ export default function Transfers() {
       <div id="transfers-table" className="card overflow-hidden">
         {transfers.length === 0 ? (
           <div className="text-center py-16 text-slate-400 text-sm">
-            No transfer manifests have been executed yet. Click "Execute" in the dashboard redistribution panel to log a manifest.
+            {allTransfers.length > 0
+              ? "No transfer manifests touch your facility or state yet."
+              : `No transfer manifests have been executed yet. Click "Execute" in the redistribution panel to log a manifest.`}
           </div>
         ) : (
           <div className="overflow-x-auto">

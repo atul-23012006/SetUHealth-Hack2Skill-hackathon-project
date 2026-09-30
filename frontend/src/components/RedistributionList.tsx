@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import axios from "axios";
-import { Brain, Check, CheckCircle2, X } from "lucide-react";
+import { Brain, Check, CheckCircle2, Lock, X } from "lucide-react";
 import type { RedistributionRec, Medicine } from "../lib/types";
 import { useLang } from "../lib/LangContext";
 import { api } from "../lib/api";
+import { useAuth } from "../lib/AuthContext";
 import RiskBadge from "./RiskBadge";
 
 interface Props {
@@ -34,6 +35,7 @@ interface Toast {
 
 export default function RedistributionList({ recs, medicines, onTransferExecuted }: Props) {
   const { t, lang } = useLang();
+  const { canAccessPhc } = useAuth();
   // Row awaiting a second click to confirm (armed by the first Execute click).
   const [confirmingKey, setConfirmingKey] = useState<string | null>(null);
   const [executingKey, setExecutingKey] = useState<string | null>(null);
@@ -160,6 +162,10 @@ export default function RedistributionList({ recs, medicines, onTransferExecuted
             const isConfirming = confirmingKey === key;
             const isExecuting = executingKey === key;
             const anyInFlight = executingKey !== null;
+            // Mirrors the backend's authorize_transfer check (services/auth.py) so
+            // an out-of-jurisdiction row can't even be clicked, instead of round-
+            // tripping to the server just to get a 403 back.
+            const canExecute = canAccessPhc(r.from_phc_id, r.from_state);
 
             return (
               <div key={key} className="py-3">
@@ -210,7 +216,14 @@ export default function RedistributionList({ recs, medicines, onTransferExecuted
                       </button>
                     )}
 
-                    {isConfirming ? (
+                    {!canExecute ? (
+                      <span
+                        title={`Outside your jurisdiction — only ${r.from_state} can execute a transfer out of ${r.from_phc_name}`}
+                        className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-400 font-medium cursor-not-allowed"
+                      >
+                        <Lock size={11} /> {t("execute")}
+                      </span>
+                    ) : isConfirming ? (
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleExecute(r)}

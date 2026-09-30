@@ -16,6 +16,20 @@ interface AuthCtx {
   signedIn: boolean;
   login: (userId: string, password: string) => Promise<void>;
   logout: () => void;
+  // Jurisdiction: a national_admin (or nobody signed in yet, which only
+  // happens in demo mode — token mode gates the whole console behind
+  // sign-in) has unrestricted access, matching today's behavior. A
+  // state_coordinator or phc_operator is scoped to their own domain: see
+  // README's authorize_transfer for the backend half of this same model.
+  role: string | null;
+  isNational: boolean;
+  homeState: string | null;
+  homePhcId: string | null;
+  /** Where this role's console starts — the state/facility dashboard for a
+   * scoped role, or "/" (the national Dashboard) for a national_admin. */
+  homePath: string;
+  canAccessState: (state: string) => boolean;
+  canAccessPhc: (phcId: string, phcState: string) => boolean;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -113,8 +127,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const user = mode === "token" ? sessionUser : users.find((u) => u.user_id === userId) ?? null;
 
+  const role = user?.role ?? null;
+  const homeState = role === "state_coordinator" ? user!.authorized_states.find((s) => s !== "*") ?? null : null;
+  const homePhcId = role === "phc_operator" ? user!.authorized_phc_ids[0] ?? null : null;
+  // Anyone whose role isn't a scoped one (national_admin, an unrecognized
+  // role, or no user at all) is unrestricted, matching today's behavior. A
+  // scoped role with nothing actually assigned to scope them to (a
+  // misconfigured account — the shipped roster never produces this) also
+  // falls back to unrestricted: there's nowhere else to send them, and
+  // every page's guard redirecting to itself would otherwise loop.
+  const isScopedRole = role === "phc_operator" || role === "state_coordinator";
+  const isNational = !user || !isScopedRole || (!homeState && !homePhcId);
+  const homePath = homePhcId ? `/phcs/${encodeURIComponent(homePhcId)}`
+    : homeState ? `/states/${encodeURIComponent(homeState)}`
+    : "/";
+
+  const canAccessState = (state: string) => {
+    if (isNational) return true;
+    if (role === "state_coordinator") return user!.authorized_states.includes(state);
+    return false; // a phc_operator has no state-level view, even their own
+  };
+  const canAccessPhc = (phcId: string, phcState: string) => {
+    if (isNational) return true;
+    if (role === "phc_operator") return user!.authorized_phc_ids.includes(phcId);
+    if (role === "state_coordinator") return canAccessState(phcState);
+    return false;
+  };
+
   return (
-    <Ctx.Provider value={{ mode, users, userId, setUserId, user, signedIn: mode === "token" ? sessionUser !== null : true, login, logout }}>
+    <Ctx.Provider value={{
+      mode, users, userId, setUserId, user, signedIn: mode === "token" ? sessionUser !== null : true, login, logout,
+      role, isNational, homeState, homePhcId, homePath, canAccessState, canAccessPhc,
+    }}>
       {children}
     </Ctx.Provider>
   );

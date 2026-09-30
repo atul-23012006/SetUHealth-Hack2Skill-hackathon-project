@@ -36,13 +36,20 @@ straight from the existing `backend/Dockerfile`.
      at boot if the disk is empty), so this just works.
 3. **Environment variables** (Render's dashboard, not committed anywhere):
    `GEMINI_API_KEY`, `AUTH_MODE=token`, `JWT_SECRET`, `DEMO_USER_PASSWORD`,
-   and **`WORKER_POOL_SIZE=0`** — see §1 below for what the auth ones do.
-   `WORKER_POOL_SIZE=0` matters specifically on Render's free tier: the
-   default spawns extra OS processes to parallelize forecasting, each
-   reimporting the whole app and reloading the full dataset independently —
-   enough to OOM a 512Mi instance before it ever opens its port. `0` runs
-   that work inline instead. Leave `CORS_ORIGINS` for step 3 below, once the
-   frontend has a URL.
+   and **`WORKER_POOL_SIZE=0`** + **`EAGER_WARMUP=false`** — see §1 below for
+   what the auth ones do. The last two matter specifically on Render's free
+   tier (512Mi, 0.1 CPU):
+   - `WORKER_POOL_SIZE=0` — the default spawns extra OS processes to
+     parallelize forecasting, each reimporting the whole app and reloading
+     the full dataset independently — enough to OOM a 512Mi instance before
+     it ever opens its port. `0` runs that work inline instead.
+   - `EAGER_WARMUP=false` — with the pool disabled, the default's eager
+     national-forecast warmup at startup (~1,866 fits, one at a time on
+     0.1 CPU) can take long enough to blow past Render's own boot window.
+     `false` defers it to the first request that needs it instead — that one
+     request is slower (~10s), everything after is instant (cached).
+
+   Leave `CORS_ORIGINS` for step 3 below, once the frontend has a URL.
 4. Deploy, then copy the service's public URL
    (`https://<something>.onrender.com`).
 5. **Free-tier note**: the service sleeps after inactivity; the first

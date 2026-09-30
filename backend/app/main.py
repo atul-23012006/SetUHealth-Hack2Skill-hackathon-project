@@ -45,8 +45,10 @@ async def lifespan(_: FastAPI):
     # so it's already cached by the time any request needs it, and dispatches
     # across the now-warm workers rather than paying process-spawn too. Off
     # the event loop thread since both block for the full warmup.
-    await asyncio.to_thread(worker_pool.warm_pool)
-    await asyncio.to_thread(forecasting.forecast_all)
+    # See config.py's eager_warmup for why this can be skipped entirely.
+    if settings.eager_warmup:
+        await asyncio.to_thread(worker_pool.warm_pool)
+        await asyncio.to_thread(forecasting.forecast_all)
 
     # Background check for real weather signals turning high (see services/signal_alerts.py).
     poller = None

@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     # a deployment that tight to run forecasting/redistribution inline in the
     # main process instead — slower per call, but no duplicated memory.
     worker_pool_size: int = -1
+    # Compute the national forecast (and warm the worker pool) eagerly at
+    # startup, before the server opens its port, so the first real request
+    # never pays for it — the default, fine on a normal host. On a tightly
+    # CPU/memory-capped one (Render's free tier: 0.1 CPU), that eager work
+    # can take long enough to blow past the platform's own boot/health-check
+    # window. Set to false there: both are deferred to whichever request
+    # first actually needs them (results are cached after, same as eager).
+    eager_warmup: bool = True
 
     class Config:
         env_file = ".env"

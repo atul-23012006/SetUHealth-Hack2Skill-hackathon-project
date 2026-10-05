@@ -46,9 +46,16 @@ _FORECAST_CACHE = {}
 _NATIONAL_FORECAST_LOCK = threading.Lock()
 
 
+# Results derived from the forecasts (e.g. redistribution recommendations) that
+# are just as expensive to recompute and go stale on exactly the same events,
+# so they share clear_forecast_cache()'s invalidation instead of a second hook.
+DERIVED_CACHE: dict = {}
+
+
 def clear_forecast_cache():
     """Clear the in-memory forecast cache when stock data mutations occur."""
     _FORECAST_CACHE.clear()
+    DERIVED_CACHE.clear()
 
 
 def check_surge(levels: list[float]) -> tuple[float, float, bool]:

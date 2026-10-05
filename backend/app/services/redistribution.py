@@ -9,7 +9,7 @@ minimizing transport costs (distance + district/state penalties).
 import pulp
 
 from app.services import store, worker_pool
-from app.services.forecasting import forecast_all, forecast_medicine
+from app.services.forecasting import DERIVED_CACHE, forecast_all, forecast_medicine
 from app.services.geo import haversine_km as _haversine_km
 
 SURPLUS_MARGIN_DAYS = 25  # no risk before this many days => can be a donor
@@ -368,6 +368,19 @@ def _apply_cross_medicine_donor_cap(recs: list[dict]) -> list[dict]:
 
 
 def recommend_all(state: str | None = None, forecasts: list[dict] | None = None) -> list[dict]:
+    # Solving every resource's LP is the slow part of loading the Dashboard on
+    # a CPU-throttled host. The result only changes when stock does, which
+    # already clears forecasting's caches. Callers that pass their own
+    # `forecasts` (scenario overlays) bypass the cache.
+    if forecasts is not None:
+        return _recommend_all(state, forecasts)
+    key = ("recommend_all", state)
+    if key not in DERIVED_CACHE:
+        DERIVED_CACHE[key] = _recommend_all(state, None)
+    return [dict(r) for r in DERIVED_CACHE[key]]
+
+
+def _recommend_all(state: str | None, forecasts: list[dict] | None) -> list[dict]:
     # Each tracked resource (not just medicines — adding one to the registry is
     # enough for it to start being redistributed) gets its own independent LP.
     # Building + solving one is roughly half CBC-subprocess-wait and half

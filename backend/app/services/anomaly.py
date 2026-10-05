@@ -218,12 +218,15 @@ def detect_all(state: str | None = None) -> list[dict]:
     self-history) takes seconds on a CPU-throttled host and only changes when
     stock does, which already clears forecasting's caches. The network-median
     drift history still advances on every call, exactly as before."""
-    key = ("anomalies", state)
-    if key not in DERIVED_CACHE:
-        DERIVED_CACHE[key] = _detect_all(state)
-    anomalies, dominant_median = DERIVED_CACHE[key]
+    # Baselines are always network-wide and `state` only narrows what's
+    # returned (see _detect_all), so one national entry serves every state.
+    if "anomalies" not in DERIVED_CACHE:
+        DERIVED_CACHE["anomalies"] = _detect_all(None)
+    anomalies, dominant_median = DERIVED_CACHE["anomalies"]
     if dominant_median is not None:
         _record_network_median(dominant_median)
+    if state:
+        anomalies = [a for a in anomalies if a["state"] == state]
     return [dict(a) for a in anomalies]
 
 

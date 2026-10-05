@@ -374,10 +374,14 @@ def recommend_all(state: str | None = None, forecasts: list[dict] | None = None)
     # `forecasts` (scenario overlays) bypass the cache.
     if forecasts is not None:
         return _recommend_all(state, forecasts)
-    key = ("recommend_all", state)
-    if key not in DERIVED_CACHE:
-        DERIVED_CACHE[key] = _recommend_all(state, None)
-    return [dict(r) for r in DERIVED_CACHE[key]]
+    # The LPs always run over the whole network and `state` only filters the
+    # result, so one national entry serves every state's view.
+    if "recommend_all" not in DERIVED_CACHE:
+        DERIVED_CACHE["recommend_all"] = _recommend_all(None, None)
+    recs = DERIVED_CACHE["recommend_all"]
+    if state:
+        recs = [r for r in recs if r["from_state"] == state or r["to_state"] == state]
+    return [dict(r) for r in recs]
 
 
 def _recommend_all(state: str | None, forecasts: list[dict] | None) -> list[dict]:

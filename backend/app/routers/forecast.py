@@ -9,6 +9,9 @@ from app.services import forecasting
 router = APIRouter(prefix="/api/forecast", tags=["forecast"])
 
 
+# `default=` only runs for values json can't write natively (e.g. numpy
+# scalars), so the whole payload isn't first copied by jsonable_encoder — one
+# fewer ~2 MB-of-objects duplicate on a 512 MiB host.
 def forecast_json(state: str | None = None) -> tuple[bytes, bytes]:
     """The national forecast is ~270 KB of JSON; re-serializing it per request
     took ~4s on a 0.1-CPU host even with the forecasts themselves cached. The
@@ -16,7 +19,7 @@ def forecast_json(state: str | None = None) -> tuple[bytes, bytes]:
     the same clear_forecast_cache() that invalidates the data they came from."""
     key = ("forecast_json", state)
     if key not in forecasting.DERIVED_CACHE:
-        raw = json.dumps(jsonable_encoder(forecasting.forecast_all(state))).encode()
+        raw = json.dumps(forecasting.forecast_all(state), default=jsonable_encoder).encode()
         # Compressed once here as well: gzipping 2 MB per request in the
         # middleware cost ~1s of CPU each time on the same 0.1-CPU host.
         forecasting.DERIVED_CACHE[key] = (raw, gzip.compress(raw, compresslevel=6))

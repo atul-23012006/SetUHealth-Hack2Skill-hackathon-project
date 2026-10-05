@@ -107,7 +107,12 @@ def _request(method: str, url: str, *, params=None, data=None, timeout: float = 
         resp.raise_for_status()
         return resp.json()
     except (httpx.HTTPError, ValueError) as exc:
-        raise LiveDataError(f"{url.split('/')[2]} unavailable: {type(exc).__name__}") from exc
+        # Say *why* when the upstream answered: a bare "HTTPStatusError" hid a
+        # shared-IP rate limit (429) from Render's logs and the UI alike.
+        detail = type(exc).__name__
+        if isinstance(exc, httpx.HTTPStatusError):
+            detail = f"HTTP {exc.response.status_code}: {exc.response.text[:120].strip()}"
+        raise LiveDataError(f"{url.split('/')[2]} unavailable: {detail}") from exc
 
 
 _CACHE: dict[str, tuple[float, object]] = {}

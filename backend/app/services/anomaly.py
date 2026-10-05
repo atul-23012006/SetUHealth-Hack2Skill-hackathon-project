@@ -59,6 +59,7 @@ import statistics
 from datetime import datetime
 
 from app.services import store
+from app.services.forecasting import DERIVED_CACHE
 
 WINDOW = 21            # trailing days scored
 MIN_BASELINE_DAYS = 14  # need at least this much pre-window history
@@ -213,6 +214,20 @@ def network_median_drift() -> dict:
 
 
 def detect_all(state: str | None = None) -> list[dict]:
+    """Cached front for ``_detect_all``: scoring every facility (with its
+    self-history) takes seconds on a CPU-throttled host and only changes when
+    stock does, which already clears forecasting's caches. The network-median
+    drift history still advances on every call, exactly as before."""
+    key = ("anomalies", state)
+    if key not in DERIVED_CACHE:
+        DERIVED_CACHE[key] = _detect_all(state)
+    anomalies, dominant_median = DERIVED_CACHE[key]
+    if dominant_median is not None:
+        _record_network_median(dominant_median)
+    return [dict(a) for a in anomalies]
+
+
+def _detect_all(state: str | None) -> tuple[list[dict], float | None]:
     """Score every PHC and return the flagged consumption anomalies, worst first.
 
     The network median/MAD baseline is always computed across the *entire*
@@ -228,7 +243,7 @@ def detect_all(state: str | None = None) -> list[dict]:
             scored.append(idx)
 
     if len(scored) < 5:
-        return []
+        return [], None
 
     # Each facility is scored against the baseline of its own *facility type*.
     # A blood bank's blood drawdown against donor throughput is simply not the
@@ -252,13 +267,12 @@ def detect_all(state: str | None = None) -> list[dict]:
         baselines[ftype] = (median, 1.4826 * mad)
 
     if not baselines:
-        return []
+        return [], None
 
     # Drift tracking follows the dominant facility population — the one whose
     # movement actually constitutes a network-wide event.
     dominant = max(cohorts, key=lambda f: len(cohorts[f]))
-    if dominant in baselines:
-        _record_network_median(baselines[dominant][0])
+    dominant_median = baselines[dominant][0] if dominant in baselines else None
 
     anomalies = []
     for s in scored:
@@ -311,7 +325,7 @@ def detect_all(state: str | None = None) -> list[dict]:
         key=lambda a: max(abs(a["z_score"]), abs(a["self_z_score"]) if a["self_z_score"] is not None else 0),
         reverse=True,
     )
-    return anomalies
+    return anomalies, dominant_median
 
 
 def _headline(phc: dict, direction: str, consumption_pct: int, footfall_pct: int) -> str:

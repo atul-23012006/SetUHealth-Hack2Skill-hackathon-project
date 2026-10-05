@@ -34,6 +34,25 @@ from app.services.rate_limit import limiter
 logger = logging.getLogger(__name__)
 
 
+def _warm_caches() -> None:
+    """Fill the expensive caches (national forecast, redistribution LP,
+    anomaly scoring) in the background, after the port is already open — for
+    deployments that set EAGER_WARMUP=false because blocking boot on this
+    overran the platform's health-check window. Without it, whoever loads the
+    Dashboard first after a wake-up/restart pays for all of it (~15s on
+    Render's free tier). forecast_all is lock-guarded, so a real request that
+    arrives mid-warmup waits for the same computation instead of duplicating it."""
+    from app.services import anomaly
+    from app.services import redistribution as redistribution_service
+
+    try:
+        forecasting.forecast_all()
+        redistribution_service.recommend_all()
+        anomaly.detect_all()
+    except Exception:
+        logger.exception("background cache warmup failed; requests will compute lazily")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Warm the shared solver/forecast pool (services/worker_pool.py) now, not
@@ -49,6 +68,10 @@ async def lifespan(_: FastAPI):
     if settings.eager_warmup:
         await asyncio.to_thread(worker_pool.warm_pool)
         await asyncio.to_thread(forecasting.forecast_all)
+
+    warmup = None
+    if not settings.eager_warmup:
+        warmup = asyncio.create_task(asyncio.to_thread(_warm_caches))
 
     # Background check for real weather signals turning high (see services/signal_alerts.py).
     poller = None
@@ -77,6 +100,8 @@ async def lifespan(_: FastAPI):
     yield
     if poller:
         poller.cancel()
+    if warmup:
+        warmup.cancel()
     # Shut down the shared solver/forecast pool so worker processes don't
     # outlive a graceful stop/reload.
     worker_pool.shutdown_pool()

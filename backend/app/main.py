@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -49,6 +50,7 @@ def _warm_caches() -> None:
         forecasting.forecast_all()
         redistribution_service.recommend_all()
         anomaly.detect_all()
+        forecast.forecast_json()
     except Exception:
         logger.exception("background cache warmup failed; requests will compute lazily")
 
@@ -113,6 +115,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+class _GZipExceptStream(GZipMiddleware):
+    """Compress API responses (the larger JSON payloads shrink ~10x, which
+    matters on a slow link) but never the assistant's SSE stream: this
+    Starlette version buffers gzip output, which would hold tokens back until
+    the whole reply finished."""
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"].endswith("/chat/stream"):
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
+
+
+app.add_middleware(_GZipExceptStream, minimum_size=1024)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

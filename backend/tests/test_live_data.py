@@ -445,3 +445,54 @@ def test_default_api_key_is_data_gov_ins_own_published_sample_key():
     from app.config import Settings
 
     assert Settings().data_gov_in_api_key == "579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b"
+
+
+# ---------------------------------------------------- Open-Meteo -> MET Norway fallback
+
+def _met_no_response():
+    steps = []
+    for hour in range(0, 48):  # hourly steps, 2 civil days
+        steps.append({
+            "time": f"2026-10-0{5 + hour // 24}T{hour % 24:02d}:00:00Z",
+            "data": {
+                "instant": {"details": {"air_temperature": 20.0 + (hour % 24) / 4, "relative_humidity": 75.0, "wind_speed": 2.0}},
+                "next_1_hours": {"details": {"precipitation_amount": 1.0}},
+            },
+        })
+    return {"properties": {"timeseries": steps}}
+
+
+def test_weather_falls_back_to_met_no_when_open_meteo_refuses(monkeypatch):
+    def fake(method, url, **kw):
+        if "open-meteo" in url:
+            raise live_data.LiveDataError("api.open-meteo.com unavailable: HTTP 429")
+        assert "api.met.no" in url
+        return _met_no_response()
+
+    monkeypatch.setattr(live_data, "_request", fake)
+    body = live_data.state_weather()
+    assert "MET Norway" in body["source"] and "fallback" in body["source"]
+    first = body["states"][0]
+    assert first["current"]["humidity_pct"] == 75.0
+    assert first["current"]["wind_kmh"] == 7.2  # 2 m/s
+    assert len(first["daily"]) >= 2 and first["daily"][0]["rain_mm"] > 0
+    assert {s["id"] for s in first["signals"]} == {"flood", "vector", "heat"}
+
+
+def test_weather_error_names_both_providers_when_both_fail(monkeypatch):
+    def down(method, url, **kw):
+        raise live_data.LiveDataError(f"{url.split('/')[2]} unavailable: HTTP 429")
+
+    monkeypatch.setattr(live_data, "_request", down)
+    with pytest.raises(live_data.LiveDataError) as exc:
+        live_data.state_weather()
+    assert "open-meteo" in str(exc.value) and "fallback also failed" in str(exc.value)
+
+
+def test_met_no_primary_is_not_called_when_open_meteo_works(monkeypatch):
+    def fake(method, url, **kw):
+        assert "api.met.no" not in url
+        return [_raw_weather(18.5, 73.8, [0] * 7) for _ in range(len(live_data.state_centroids()))]
+
+    monkeypatch.setattr(live_data, "_request", fake)
+    assert live_data.state_weather()["source"].startswith("Open-Meteo")

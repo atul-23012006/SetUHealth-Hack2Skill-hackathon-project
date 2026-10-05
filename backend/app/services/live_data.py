@@ -16,6 +16,7 @@ import statistics
 import threading
 import time
 from collections.abc import Callable
+from datetime import datetime, timedelta
 
 import httpx
 
@@ -27,6 +28,7 @@ HTTP_TIMEOUT_S = 6.0
 OVERPASS_TIMEOUT_S = 9.0
 
 OPEN_METEO_FORECAST = "https://api.open-meteo.com/v1/forecast"
+MET_NO_FORECAST = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
 OPEN_METEO_AIR = "https://air-quality-api.open-meteo.com/v1/air-quality"
 OPEN_METEO_GEOCODE = "https://geocoding-api.open-meteo.com/v1/search"
 WORLD_BANK = "https://api.worldbank.org/v2"
@@ -353,7 +355,11 @@ def _weather_entry(raw: dict) -> dict:
     }
 
 
-def _fetch_weather(points: list[tuple[float, float]]) -> list[dict]:
+OPEN_METEO_SOURCE = "Open-Meteo (open-meteo.com), no API key"
+MET_NO_SOURCE = "MET Norway (api.met.no), no API key — fallback: Open-Meteo refused the request"
+
+
+def _fetch_open_meteo(points: list[tuple[float, float]]) -> list[dict]:
     params = dict(_WEATHER_PARAMS)
     params["latitude"] = ",".join(f"{lat:.4f}" for lat, _ in points)
     params["longitude"] = ",".join(f"{lon:.4f}" for _, lon in points)
@@ -362,6 +368,73 @@ def _fetch_weather(points: list[tuple[float, float]]) -> list[dict]:
     if len(rows) != len(points):
         raise LiveDataError("open-meteo returned an unexpected number of locations")
     return [_weather_entry(r) for r in rows]
+
+
+def _met_no_as_open_meteo(raw: dict, lat: float, lon: float) -> dict:
+    """Reshape one MET Norway locationforecast response into the Open-Meteo
+    fields ``_weather_entry`` reads, so the signal rules stay a single code
+    path whichever provider answered. Days are local civil days, with the
+    UTC offset approximated from longitude (India: ~+5.5 h)."""
+    series = ((raw.get("properties") or {}).get("timeseries")) or []
+    if not series:
+        raise LiveDataError("api.met.no returned no forecast data")
+    offset = timedelta(hours=round(lon / 15))
+    days: dict[str, dict[str, list[float]]] = {}
+    for step in series:
+        when = datetime.fromisoformat(step["time"].replace("Z", "+00:00")) + offset
+        details = step["data"]["instant"]["details"]
+        day = days.setdefault(when.date().isoformat(), {"rain": [], "temp": []})
+        if details.get("air_temperature") is not None:
+            day["temp"].append(details["air_temperature"])
+        # Hourly steps carry next_1_hours; the later 6-hourly steps only
+        # next_6_hours. Steps never overlap, so each contributes its own amount.
+        nxt = step["data"].get("next_1_hours") or step["data"].get("next_6_hours") or {}
+        amount = (nxt.get("details") or {}).get("precipitation_amount")
+        if amount is not None:
+            day["rain"].append(amount)
+    dates = sorted(days)[:7]
+    first = series[0]["data"]
+    now = first["instant"]["details"]
+    hourly = (first.get("next_1_hours") or first.get("next_6_hours") or {}).get("details") or {}
+    return {
+        "latitude": lat, "longitude": lon,
+        "current": {
+            "time": series[0]["time"],
+            "temperature_2m": now.get("air_temperature"),
+            "apparent_temperature": None,
+            "relative_humidity_2m": now.get("relative_humidity"),
+            "precipitation": hourly.get("precipitation_amount"),
+            "wind_speed_10m": round(now["wind_speed"] * 3.6, 1) if now.get("wind_speed") is not None else None,
+        },
+        "daily": {
+            "time": dates,
+            "precipitation_sum": [round(sum(days[d]["rain"]), 1) for d in dates],
+            "temperature_2m_max": [max(days[d]["temp"]) if days[d]["temp"] else None for d in dates],
+            "temperature_2m_min": [min(days[d]["temp"]) if days[d]["temp"] else None for d in dates],
+        },
+    }
+
+
+def _fetch_met_no(points: list[tuple[float, float]]) -> list[dict]:
+    return [
+        _weather_entry(_met_no_as_open_meteo(
+            _request("GET", MET_NO_FORECAST, params={"lat": f"{lat:.4f}", "lon": f"{lon:.4f}"}), lat, lon))
+        for lat, lon in points
+    ]
+
+
+def _fetch_weather(points: list[tuple[float, float]]) -> tuple[list[dict], str]:
+    """(entries, provider). Open-Meteo rate-limits per IP and a shared cloud
+    host's daily quota can already be spent by other tenants (HTTP 429), so a
+    refusal falls back to MET Norway's free forecast rather than leaving the
+    weather panels empty. The provider is returned so ``source`` stays honest."""
+    try:
+        return _fetch_open_meteo(points), OPEN_METEO_SOURCE
+    except LiveDataError as primary:
+        try:
+            return _fetch_met_no(points), MET_NO_SOURCE
+        except (LiveDataError, KeyError, TypeError, ValueError) as fallback:
+            raise LiveDataError(f"{primary}; fallback also failed: {fallback}") from fallback
 
 
 def state_centroids() -> dict[str, tuple[float, float]]:
@@ -381,9 +454,9 @@ def state_weather() -> dict:
     key = "state_weather:" + ";".join(f"{s}:{la}:{lo}" for s, (la, lo) in centroids.items())
 
     def produce():
-        entries = _fetch_weather(list(centroids.values()))
+        entries, source = _fetch_weather(list(centroids.values()))
         return {
-            "source": "Open-Meteo (open-meteo.com), no API key",
+            "source": source,
             "fetched_at": _now_iso(),
             "states": [{"state": s, **e} for s, e in zip(centroids.keys(), entries, strict=False)],
             "stale": False,
@@ -397,7 +470,8 @@ def place_snapshot(lat: float, lon: float) -> dict:
     key = f"place:{round(lat, 2)}:{round(lon, 2)}"
 
     def produce():
-        weather = _fetch_weather([(lat, lon)])[0]
+        entries, source = _fetch_weather([(lat, lon)])
+        weather = entries[0]
         air = None
         try:
             raw = _request("GET", OPEN_METEO_AIR, params={
@@ -413,7 +487,7 @@ def place_snapshot(lat: float, lon: float) -> dict:
         except (LiveDataError, KeyError, TypeError, AttributeError):
             air = None  # weather alone is still useful; the UI shows "air quality unavailable"
         return {
-            "source": "Open-Meteo (open-meteo.com), no API key",
+            "source": source,
             "fetched_at": _now_iso(),
             "point": {"lat": lat, "lon": lon},
             "weather": weather,

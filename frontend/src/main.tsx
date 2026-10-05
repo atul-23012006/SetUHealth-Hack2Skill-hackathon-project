@@ -26,6 +26,10 @@ if ('serviceWorker' in navigator) {
 }
 
 
+// Wake a sleeping free-tier backend as early as possible, before any page
+// component asks it for data. Fire-and-forget; failures are irrelevant.
+fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/health`, { mode: 'cors' }).catch(() => {})
+
 // Perform initial sync of any offline transfers queued in localStorage
 if (navigator.onLine) {
   syncOfflineTransfers();
